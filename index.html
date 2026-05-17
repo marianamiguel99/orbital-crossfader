@@ -485,19 +485,19 @@ function initOrbital() {
   const ctx    = canvas.getContext('2d');
   const W = 1000, H = 1000, cx = 500, cy = 500;
   const R = 492; // min(W,H)/2 - 8
-  const D = (R - 26) / Math.SQRT2; // ≈ 329.5
+  const D = R - 26; // 466 — cardinal radius from centre to node
 
   const THRESHOLD    = 0.5;
   const SNAP_R       = 38;   // gravity well radius
   const CORNER_SNAP  = 52;   // snap-on-release radius
   const DEAD_ZONE_R  = R * 0.18;
 
-  // Diagonal X node positions
+  // Cardinal cross node positions: top=0, right=1, bottom=2, left=3
   const nodes = [
-    { x: cx+D, y: cy-D, color: slots[0].color }, // NE slot 0
-    { x: cx+D, y: cy+D, color: slots[1].color }, // SE slot 1
-    { x: cx-D, y: cy+D, color: slots[2].color }, // SW slot 2
-    { x: cx-D, y: cy-D, color: slots[3].color }, // NW slot 3
+    { x: cx,   y: cy-D, color: slots[0].color }, // top    slot 0
+    { x: cx+D, y: cy,   color: slots[1].color }, // right  slot 1
+    { x: cx,   y: cy+D, color: slots[2].color }, // bottom slot 2
+    { x: cx-D, y: cy,   color: slots[3].color }, // left   slot 3
   ];
 
   // Pre-generate grain particles
@@ -550,23 +550,23 @@ function initOrbital() {
     const angle = Math.atan2(dy,dx) * 180/Math.PI;
     const wO = new Float32Array(4);
 
-    if (angle >= -135 && angle < -45) {
-      // Top sector: NW(3) ↔ NE(0)
-      const t = (angle+135)/90;
-      wO[3] = 1-t; wO[0] = t;
-    } else if (angle >= -45 && angle < 45) {
-      // Right sector: NE(0) ↔ SE(1)
-      const t = (angle+45)/90;
+    // Nodes are cardinal (top/right/bottom/left); sectors bounded by diagonal axes
+    if (angle >= -90 && angle < 0) {
+      // NE quadrant: TOP(0) ↔ RIGHT(1)
+      const t = (angle+90)/90;
       wO[0] = 1-t; wO[1] = t;
-    } else if (angle >= 45 && angle < 135) {
-      // Bottom sector: SE(1) ↔ SW(2)
-      const t = (angle-45)/90;
+    } else if (angle >= 0 && angle < 90) {
+      // SE quadrant: RIGHT(1) ↔ BOTTOM(2)
+      const t = angle/90;
       wO[1] = 1-t; wO[2] = t;
-    } else {
-      // Left sector: SW(2) ↔ NW(3)
-      const na = angle >= 0 ? angle : angle+360;
-      const t = clamp((na-135)/90, 0, 1);
+    } else if (angle >= 90 && angle < 180) {
+      // SW quadrant: BOTTOM(2) ↔ LEFT(3)
+      const t = (angle-90)/90;
       wO[2] = 1-t; wO[3] = t;
+    } else {
+      // NW quadrant: LEFT(3) ↔ TOP(0)  (angle -180 to -90)
+      const t = (angle+180)/90;
+      wO[3] = 1-t; wO[0] = t;
     }
 
     const blendT = smoothstep((nd-THRESHOLD)/(1-THRESHOLD));
