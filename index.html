@@ -378,7 +378,8 @@ function renderLibrary() {
         <span class="stat-key">${song.key}</span>
       </div>
     `;
-    card.addEventListener('mousedown', e => startPointerDrag(e, song, card));
+    card.addEventListener('pointerdown', e => startPointerDrag(e, song, card));
+    card.addEventListener('mousedown',   e => startPointerDrag(e, song, card));
     lib.appendChild(card);
   });
 }
@@ -413,14 +414,15 @@ function renderSlots() {
 let dragState = null;
 
 function startPointerDrag(e, song, sourceCard) {
-  if (e.button !== 0) return;
+  // Avoid double-firing when both pointerdown and mousedown listeners fire
+  if (dragState) return;
+  if (e.button !== undefined && e.button !== 0) return;
   e.preventDefault();
 
   const rect = sourceCard.getBoundingClientRect();
   const offX = e.clientX - rect.left;
   const offY = e.clientY - rect.top;
 
-  // Clone the card as the ghost
   const ghost = sourceCard.cloneNode(true);
   ghost.style.cssText = `
     position: fixed;
@@ -439,20 +441,29 @@ function startPointerDrag(e, song, sourceCard) {
   `;
   document.body.appendChild(ghost);
 
-  // Dim the source
   sourceCard.style.opacity = '0.35';
   document.body.style.cursor = 'grabbing';
   document.body.style.userSelect = 'none';
 
   dragState = { song, ghost, sourceCard, offX, offY, hoverSlot: -1 };
 
-  document.addEventListener('mousemove', onPointerMove);
-  document.addEventListener('mouseup',   onPointerUp);
+  // Pointer Events (covers mouse + touch + pen). Capture so we keep events
+  // even if cursor leaves the original element. Also keep mouse fallbacks
+  // for browsers where the card pointerdown didn't actually fire pointer.
+  if (e.pointerId !== undefined && sourceCard.setPointerCapture) {
+    try { sourceCard.setPointerCapture(e.pointerId); } catch(_){}
+    dragState.pointerId = e.pointerId;
+    dragState.capturedOn = sourceCard;
+  }
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup',   onPointerUp);
+  document.addEventListener('pointercancel', onPointerUp);
+  document.addEventListener('mousemove',   onPointerMove);
+  document.addEventListener('mouseup',     onPointerUp);
 }
 
 function slotIndexAt(clientX, clientY) {
-  // Primary: elementsFromPoint — handles transforms, scroll, devicePixelRatio
-  // correctly and finds the slot even if a child element is on top.
+  // 1. Direct hit via elementsFromPoint
   const stack = document.elementsFromPoint(clientX, clientY);
   for (const el of stack) {
     const slot = el.closest && el.closest('.track-slot');
@@ -460,13 +471,31 @@ function slotIndexAt(clientX, clientY) {
       return parseInt(slot.dataset.slot);
     }
   }
-  // Fallback: rect math (covers cases where the ghost element overlays the slot
-  // and elementsFromPoint sees nothing useful — though ghost has pointer-events:none).
-  const slots = document.querySelectorAll('.track-slot');
-  for (let i = 0; i < slots.length; i++) {
-    const r = slots[i].getBoundingClientRect();
+  // 2. Rect math
+  const slotEls = document.querySelectorAll('.track-slot');
+  for (let i = 0; i < slotEls.length; i++) {
+    const r = slotEls[i].getBoundingClientRect();
     if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
       return i;
+    }
+  }
+  // 3. Forgiving fallback — if release is inside the slots container's
+  //    horizontal range AND in a generous vertical band around the row,
+  //    snap to the closest slot by horizontal centre. Makes near-misses work.
+  const container = document.getElementById('track-slots');
+  if (container && slotEls.length) {
+    const cr = container.getBoundingClientRect();
+    const vBandTop    = cr.top - 60;
+    const vBandBottom = cr.bottom + 80;
+    if (clientY >= vBandTop && clientY <= vBandBottom &&
+        clientX >= cr.left - 20 && clientX <= cr.right + 20) {
+      let bestI = -1, bestD = Infinity;
+      for (let i = 0; i < slotEls.length; i++) {
+        const r = slotEls[i].getBoundingClientRect();
+        const dx = clientX - (r.left + r.right) / 2;
+        if (Math.abs(dx) < bestD) { bestD = Math.abs(dx); bestI = i; }
+      }
+      return bestI;
     }
   }
   return -1;
@@ -495,7 +524,7 @@ function onPointerMove(e) {
 
 function onPointerUp(e) {
   if (!dragState) return;
-  const { ghost, sourceCard, song } = dragState;
+  const { ghost, sourceCard, song, pointerId, capturedOn } = dragState;
   const idx = slotIndexAt(e.clientX, e.clientY);
 
   // Cleanup
@@ -507,8 +536,14 @@ function onPointerUp(e) {
     s.classList.remove('dragover-active');
     s.style.boxShadow = '';
   });
-  document.removeEventListener('mousemove', onPointerMove);
-  document.removeEventListener('mouseup',   onPointerUp);
+  if (pointerId !== undefined && capturedOn && capturedOn.releasePointerCapture) {
+    try { capturedOn.releasePointerCapture(pointerId); } catch(_){}
+  }
+  document.removeEventListener('pointermove', onPointerMove);
+  document.removeEventListener('pointerup',   onPointerUp);
+  document.removeEventListener('pointercancel', onPointerUp);
+  document.removeEventListener('mousemove',   onPointerMove);
+  document.removeEventListener('mouseup',     onPointerUp);
   dragState = null;
 
   console.log(`[drop] song=${song.id} at (${e.clientX},${e.clientY}) → slot=${idx}`);
@@ -673,8 +708,8 @@ function initOrbital() {
     animFrom = { x: pos.x, y: pos.y };
     animTo   = { x, y };
     const d  = dist(pos.x, pos.y, x, y);
-    // Diameter ~430px; clamp duration to 220-720ms
-    animDur   = clamp(200 + d * 1.45, 220, 720);
+    // Slower, more deliberate transitions. Diameter ~430px.
+    animDur   = clamp(380 + d * 2.6, 420, 1400);
     animStart = now;
     animActive = true;
     vx = vy = 0;
@@ -742,8 +777,8 @@ function initOrbital() {
       if (t >= 1) animActive = false;
     } else if (dragging) {
       // Smooth critically-damped follow during continued drag — no overshoot
-      pos.x += (tgt.x - pos.x) * 0.22;
-      pos.y += (tgt.y - pos.y) * 0.22;
+      pos.x += (tgt.x - pos.x) * 0.12;
+      pos.y += (tgt.y - pos.y) * 0.12;
     }
     // else: idle — pos stays put
 
