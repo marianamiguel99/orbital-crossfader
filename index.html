@@ -222,12 +222,12 @@ html, body {
   <div id="track-slots"></div>
 
   <!-- Embedded audio elements — browser picks mp3 or mpeg whichever exists -->
-  <audio id="aud-a" loop preload="auto"><source src="assets/track-a.mp3"><source src="assets/track-a.mpeg"></audio>
-  <audio id="aud-b" loop preload="auto"><source src="assets/track-b.mp3"><source src="assets/track-b.mpeg"></audio>
-  <audio id="aud-c" loop preload="auto"><source src="assets/track-c.mp3"><source src="assets/track-c.mpeg"></audio>
-  <audio id="aud-d" loop preload="auto"><source src="assets/track-d.mp3"><source src="assets/track-d.mpeg"></audio>
-  <audio id="aud-e" loop preload="auto"><source src="assets/track-e.mp3"><source src="assets/track-e.mpeg"></audio>
-  <audio id="aud-f" loop preload="auto"><source src="assets/track-f.mp3"><source src="assets/track-f.mpeg"></audio>
+  <audio id="aud-a" loop preload="auto"><source src="assets/track-a.mpeg" type="audio/mpeg"></audio>
+  <audio id="aud-b" loop preload="auto"><source src="assets/track-b.mpeg" type="audio/mpeg"></audio>
+  <audio id="aud-c" loop preload="auto"><source src="assets/track-c.mpeg" type="audio/mpeg"></audio>
+  <audio id="aud-d" loop preload="auto"><source src="assets/track-d.mpeg" type="audio/mpeg"></audio>
+  <audio id="aud-e" loop preload="auto"><source src="assets/track-e.mpeg" type="audio/mpeg"></audio>
+  <audio id="aud-f" loop preload="auto"><source src="assets/track-f.mpeg" type="audio/mpeg"></audio>
 </div>
 
 <script>
@@ -319,13 +319,30 @@ const AudioEngine = (() => {
   }
 
   function swap(slotIdx, song) {
-    slotSong[slotIdx] = song.id;
-    // Ensure the incoming song is actually playing (preload may not have
-    // auto-started it, or play() may have rejected silently on the initial
-    // start). Idempotent — replaying a playing element is a no-op.
-    const el = els[song.id];
-    if (el && started) {
-      el.play().catch(err => console.warn('swap play failed:', song.id, err.message));
+    const outgoingId = slotSong[slotIdx];
+    const incomingId = song.id;
+    console.log(`[swap] slot ${slotIdx}: ${outgoingId} → ${incomingId}`);
+
+    slotSong[slotIdx] = incomingId;
+
+    if (!started) return;
+
+    // Outgoing: if this song no longer occupies any slot, snap its volume to 0
+    // immediately so the user hears the change instantly (no 1s fade).
+    if (slotSong.indexOf(outgoingId) === -1 && els[outgoingId]) {
+      els[outgoingId].volume = 0;
+    }
+
+    // Incoming: snap to the slot's current target weight and ensure it's playing.
+    const incomingEl = els[incomingId];
+    if (incomingEl) {
+      const target = clamp((window.smoothWeights ? smoothWeights[slotIdx] : 0.25) * 0.85, 0, 1);
+      incomingEl.volume = target;
+      const p = incomingEl.play();
+      if (p) p.then(() => console.log(`[swap] ▶ ${incomingId} playing`))
+              .catch(err => console.error(`[swap] ✗ ${incomingId} play failed:`, err.message, '— check that', incomingId === 'e' ? 'assets/track-e.mp3' : incomingId === 'f' ? 'assets/track-f.mp3' : `assets/track-${incomingId}.mp3`, 'exists'));
+    } else {
+      console.error(`[swap] no audio element for song id "${incomingId}"`);
     }
   }
 
@@ -434,6 +451,17 @@ function startPointerDrag(e, song, sourceCard) {
 }
 
 function slotIndexAt(clientX, clientY) {
+  // Primary: elementsFromPoint — handles transforms, scroll, devicePixelRatio
+  // correctly and finds the slot even if a child element is on top.
+  const stack = document.elementsFromPoint(clientX, clientY);
+  for (const el of stack) {
+    const slot = el.closest && el.closest('.track-slot');
+    if (slot && slot.dataset.slot !== undefined) {
+      return parseInt(slot.dataset.slot);
+    }
+  }
+  // Fallback: rect math (covers cases where the ghost element overlays the slot
+  // and elementsFromPoint sees nothing useful — though ghost has pointer-events:none).
   const slots = document.querySelectorAll('.track-slot');
   for (let i = 0; i < slots.length; i++) {
     const r = slots[i].getBoundingClientRect();
@@ -483,8 +511,9 @@ function onPointerUp(e) {
   document.removeEventListener('mouseup',   onPointerUp);
   dragState = null;
 
-  if (idx < 0) return;
-  if (slots[idx].id === song.id) return;
+  console.log(`[drop] song=${song.id} at (${e.clientX},${e.clientY}) → slot=${idx}`);
+  if (idx < 0) { console.log('[drop] no slot under cursor — ignored'); return; }
+  if (slots[idx].id === song.id) { console.log('[drop] same song already in slot — ignored'); return; }
 
   slots[idx] = song;
   if (window.orbital) orbital.setNodeColor(idx, song.color);
@@ -492,6 +521,16 @@ function onPointerUp(e) {
   AudioEngine.start();
   renderLibrary();
   renderSlots();
+
+  // Visual confirmation flash on the swapped slot
+  requestAnimationFrame(() => {
+    const newSlot = document.querySelector(`.track-slot[data-slot="${idx}"]`);
+    if (newSlot) {
+      newSlot.style.transition = 'box-shadow 0.4s';
+      newSlot.style.boxShadow = `inset 0 0 0 2px ${song.color}, 0 0 30px ${song.color}aa`;
+      setTimeout(() => { newSlot.style.boxShadow = ''; }, 500);
+    }
+  });
 }
 
 function updateSlotBars() {
