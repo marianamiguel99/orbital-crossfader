@@ -197,6 +197,25 @@ html, body {
     <div class="hud-meta" id="hud-meta">Orbital A · 126 BPM</div>
     <div class="hud-status blending" id="hud-status">BLENDING</div>
   </div>
+  <!-- Click-to-start overlay -->
+  <div id="audio-overlay" style="
+    position:absolute;inset:0;z-index:100;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.55);cursor:pointer;
+  ">
+    <div style="text-align:center;">
+      <div style="font-size:52px;margin-bottom:12px;">▶</div>
+      <div style="font-size:16px;font-weight:600;color:#fff;letter-spacing:0.05em;">CLICK TO START</div>
+      <div id="audio-status" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px;">Loading audio…</div>
+    </div>
+  </div>
+  <!-- Embedded audio — browser resolves mp3 or mpeg whichever exists -->
+  <audio id="aud-a" loop preload="auto"><source src="assets/track-a.mp3"><source src="assets/track-a.mpeg"></audio>
+  <audio id="aud-b" loop preload="auto"><source src="assets/track-b.mp3"><source src="assets/track-b.mpeg"></audio>
+  <audio id="aud-c" loop preload="auto"><source src="assets/track-c.mp3"><source src="assets/track-c.mpeg"></audio>
+  <audio id="aud-d" loop preload="auto"><source src="assets/track-d.mp3"><source src="assets/track-d.mpeg"></audio>
+  <audio id="aud-e" loop preload="auto"><source src="assets/track-e.mp3"><source src="assets/track-e.mpeg"></audio>
+  <audio id="aud-f" loop preload="auto"><source src="assets/track-f.mp3"><source src="assets/track-f.mpeg"></audio>
 </div>
 <script>
 // ─── Song data ────────────────────────────────────────────────────────────────
@@ -237,43 +256,60 @@ function smoothstep(t){ t=clamp(t,0,1); return t*t*(3-2*t); }
 function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
 
 // ─── Audio Engine ─────────────────────────────────────────────────────────────
-// ─── Audio Engine — direct .volume, works from file:// ───────────────────────
+// ─── Audio Engine ─────────────────────────────────────────────────────────────
 const AudioEngine = (() => {
   let started = false;
-  const els = {};           // songId → HTMLAudioElement
-  const slotSong = ['a','b','c','d']; // which song is in each slot
+  const els = {};                       // songId → HTMLAudioElement
+  const slotSong = ['a','b','c','d'];   // which song is in each slot
 
   function preload() {
+    // Grab the embedded <audio> elements by id
+    const idMap = { a:'aud-a', b:'aud-b', c:'aud-c', d:'aud-d', e:'aud-e', f:'aud-f' };
+    const statusEl = document.getElementById('audio-status');
+    let loaded = 0;
+
     SONGS.forEach(s => {
-      const el = new Audio(s.file);
-      el.loop = true;
+      const el = document.getElementById(idMap[s.id]);
       el.volume = 0;
-      el.preload = 'auto';
       els[s.id] = el;
+
+      el.addEventListener('canplay', () => {
+        loaded++;
+        if (statusEl) statusEl.textContent = `${loaded}/6 tracks ready`;
+      }, { once: true });
+
+      el.addEventListener('error', () => {
+        if (statusEl) statusEl.textContent = `⚠ Can't load track-${s.id} — check assets/`;
+        console.error('Audio load error:', s.id, el.error);
+      });
     });
   }
 
   function start() {
     if (started) return;
     started = true;
+    const overlay = document.getElementById('audio-overlay');
+    if (overlay) overlay.style.display = 'none';
+
+    let ok = 0;
     SONGS.forEach(s => {
-      els[s.id].play().catch(err => console.warn('Audio play blocked:', s.id, err));
+      els[s.id].play()
+        .then(() => { ok++; console.log(`▶ ${s.id} playing (${ok}/6)`); })
+        .catch(err => console.error(`✗ ${s.id}:`, err.name, err.message));
     });
   }
 
-  // Called every frame from the render loop — smoothWeights drive volume directly
+  // Called every frame — smoothWeights[slotIndex] drives each song's volume
   function setGains(sw) {
     if (!started) return;
     SONGS.forEach(s => {
       const si = slotSong.indexOf(s.id);
       const target = si >= 0 ? clamp(sw[si] * 0.85, 0, 1) : 0;
-      // Lerp toward target each frame for extra smoothness
       els[s.id].volume += (target - els[s.id].volume) * 0.12;
     });
   }
 
   function swap(slotIdx, song) {
-    // Just reassign — setGains handles the volume fade automatically
     slotSong[slotIdx] = song.id;
   }
 
@@ -870,11 +906,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderLibrary();
   renderSlots();
   window.orbital = initOrbital();
-});
 
-// Start audio on first click or drag anywhere — handles Chrome autoplay policy
-document.addEventListener('click',    () => AudioEngine.start(), { once: true });
-document.addEventListener('dragstart', () => AudioEngine.start(), { once: true });
+  // Overlay click starts audio (satisfies Chrome autoplay policy)
+  document.getElementById('audio-overlay').addEventListener('click', () => {
+    AudioEngine.start();
+  });
+});
 </script>
 </body>
 </html>
