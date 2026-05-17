@@ -24,6 +24,7 @@ html, body {
   position: relative;
   overflow: hidden;
   border-radius: 12px;
+  transform-origin: center center;
   box-shadow:
     0 0 0 1px rgba(255,255,255,0.06),
     0 0 80px 24px rgba(120,120,120,0.18),
@@ -1091,7 +1092,19 @@ document.addEventListener('keydown', e => {
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
+// Auto-fit the 1440×900 app inside whatever viewport is available so the
+// slots are never clipped (matters when DevTools is open, on small laptops,
+// or in tight browser windows).
+function fitApp() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  const s = Math.min(window.innerWidth / 1440, window.innerHeight / 900, 1);
+  app.style.transform = s < 1 ? `scale(${s})` : 'none';
+}
+window.addEventListener('resize', fitApp);
+
 document.addEventListener('DOMContentLoaded', () => {
+  fitApp();
   AudioEngine.preload();
   renderLibrary();
   renderSlots();
