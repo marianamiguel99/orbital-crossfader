@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Orbital Crossfader</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #1C1C1C;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  width: 1440px;
+  height: 900px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.06),
+    0 0 80px 24px rgba(120,120,120,0.18),
+    0 24px 80px 0px rgba(0,0,0,0.70);
+}
+
+#chrome {
+  position: absolute;
+  inset: 0;
+  background: url('assets/chrome.png') no-repeat center / cover;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Song Library ── */
+#song-library {
+  position: absolute;
+  left: 370px; top: 85px;
+  width: 375px; height: 269px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+#song-library::-webkit-scrollbar { display: none; }
+
+.song-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  border-left: 3px solid transparent;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+  position: relative;
+}
+.song-card:hover { background: rgba(255,255,255,0.07); }
+.song-card.active { background: rgba(255,255,255,0.06); }
+
+.song-card img {
+  width: 64px; height: 64px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.1);
+}
+.card-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.card-title { font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-meta { font-size: 11px; color: rgba(255,255,255,0.38); }
+
+.song-wave {
+  display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+}
+.wave-bar {
+  width: 3px; border-radius: 1.5px;
+  background: rgba(255,255,255,0.35);
+}
+@keyframes w1 { 0%,100% { height:5px } 50% { height:14px } }
+@keyframes w2 { 0%,100% { height:11px } 50% { height:4px } }
+@keyframes w3 { 0%,100% { height:8px } 33% { height:14px } 66% { height:3px } }
+.wave-bar:nth-child(1) { animation: w1 0.75s ease-in-out infinite; }
+.wave-bar:nth-child(2) { animation: w2 0.55s ease-in-out infinite; }
+.wave-bar:nth-child(3) { animation: w3 0.95s ease-in-out infinite; }
+
+/* ── Orbital Wrap ── */
+#orbital-wrap {
+  position: absolute;
+  left: 595px; top: -129px;
+  width: 1000px; height: 1000px;
+  overflow: visible;
+  z-index: 10;
+}
+#orbital-pad {
+  width: 1000px; height: 1000px;
+  display: block;
+  cursor: none;
+}
+
+/* ── Track Slots ── */
+#track-slots {
+  position: absolute;
+  left: 746px; top: 738px;
+  width: 694px; height: 121px;
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
+}
+
+.track-slot {
+  width: 173px; height: 121px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px 10px 12px;
+  border-left: 3px solid transparent;
+  background: rgba(0,0,0,0.28);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.track-slot.dragover-active {
+  outline: 1.5px solid rgba(255,255,255,0.35);
+}
+
+.slot-header { display: flex; align-items: center; gap: 7px; }
+.slot-num {
+  font-size: 10px; font-weight: 700;
+  color: rgba(255,255,255,0.35);
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.slot-art {
+  width: 40px; height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.1);
+}
+.slot-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.slot-title { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot-meta { font-size: 11px; color: rgba(255,255,255,0.38); }
+
+.slot-pct {
+  position: absolute; top: 8px; right: 8px;
+  font-size: 9px; color: rgba(255,255,255,0.28);
+}
+.slot-bar {
+  position: absolute; bottom: 0; left: 0;
+  height: 2px; width: 0%;
+  border-radius: 1px;
+  transition: none;
+}
+
+/* ── HUD ── */
+#hud {
+  position: absolute;
+  left: 0; right: 0; top: 720px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  z-index: 10;
+  pointer-events: none;
+}
+.hud-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.hud-track { font-size: 13px; font-weight: 600; color: #fff; transition: opacity 0.3s; }
+.hud-meta { font-size: 11px; color: rgba(255,255,255,0.38); transition: opacity 0.3s; }
+.hud-status { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
+.hud-status.blending { color: rgba(255,200,0,0.55); }
+.hud-status.locked { color: rgba(255,255,255,0.4); }
+.hud-status.paused { color: rgba(255,255,255,0.5); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="chrome"></div>
+  <div id="song-library"></div>
+  <div id="orbital-wrap">
+    <canvas id="orbital-pad" width="1000" height="1000"></canvas>
+  </div>
+  <div id="track-slots"></div>
+  <div id="hud">
+    <div class="hud-dot" id="hud-dot" style="background:#F2B600"></div>
+    <div class="hud-track" id="hud-track">Solar Wind</div>
+    <div class="hud-meta" id="hud-meta">Orbital A · 126 BPM</div>
+    <div class="hud-status blending" id="hud-status">BLENDING</div>
+  </div>
+</div>
+<script>
+// ─── Song data ────────────────────────────────────────────────────────────────
+const SONGS = [
+  { id:'a', title:'Solar Wind', artist:'Orbital A', bpm:126, key:'4A', color:'#F2B600', art:'assets/art-a.jpeg', file:'assets/track-a.mpeg' },
+  { id:'b', title:'Deep Pulse', artist:'Orbital B', bpm:128, key:'5A', color:'#00CCCA', art:'assets/art-b.jpeg', file:'assets/track-b.mpeg' },
+  { id:'c', title:'Gravity',    artist:'Orbital C', bpm:124, key:'4B', color:'#6A4DFF', art:'assets/art-c.jpeg', file:'assets/track-c.mpeg' },
+  { id:'d', title:'Vortex',     artist:'Orbital D', bpm:128, key:'3A', color:'#F27900', art:'assets/art-d.jpeg', file:'assets/track-d.mpeg' },
+  { id:'e', title:'Meridian',   artist:'Orbital E', bpm:126, key:'6A', color:'#F2B600', art:'assets/art-e.jpeg', file:'assets/track-e.mpeg' },
+  { id:'f', title:'Undertow',   artist:'Orbital F', bpm:130, key:'5B', color:'#00CCCA', art:'assets/art-f.jpeg', file:'assets/track-f.mpeg' },
+];
+const SONG_MAP = Object.fromEntries(SONGS.map(s => [s.id, s]));
+
+// Active slots (4 always occupied)
+let slots = [SONGS[0], SONGS[1], SONGS[2], SONGS[3]];
+
+// Shared weights — written by orbital canvas, read by audio + HUD
+const smoothWeights = new Float32Array([0.25, 0.25, 0.25, 0.25]);
+
+let paused = false;
+let currentDragSong = null; // set on dragstart so dragover can read it
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function hexRgb(hex) {
+  return {
+    r: parseInt(hex.slice(1,3),16),
+    g: parseInt(hex.slice(3,5),16),
+    b: parseInt(hex.slice(5,7),16),
+  };
+}
+function hexA(hex, a) {
+  const {r,g,b} = hexRgb(hex);
+  return `rgba(${r},${g},${b},${a})`;
+}
+function clamp(v,lo,hi){ return v < lo ? lo : v > hi ? hi : v; }
+function dist(ax,ay,bx,by){ const dx=ax-bx,dy=ay-by; return Math.sqrt(dx*dx+dy*dy); }
+function smoothstep(t){ t=clamp(t,0,1); return t*t*(3-2*t); }
+function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
+
+// ─── Audio Engine ─────────────────────────────────────────────────────────────
+const AudioEngine = (() => {
+  let actx = null;
+  let masterGain = null;
+  let inited = false;
+
+  // Per-song state: { gainNode, el }
+  const songState = {};
+  // Which song id is in each slot
+  const slotSong = ['a','b','c','d'];
+  // Slots currently mid-crossfade (skip gain updates)
+  const crossfading = new Set();
+
+  function init() {
+    if (inited) return;
+    inited = true;
+
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = actx.createGain();
+    masterGain.gain.value = 0.85;
+    masterGain.connect(actx.destination);
+
+    SONGS.forEach(song => {
+      const el = document.createElement('audio');
+      el.src = song.file;
+      el.loop = true;
+      document.body.appendChild(el);
+
+      const gainNode = actx.createGain();
+      gainNode.gain.value = 0;
+      gainNode.connect(masterGain);
+
+      try {
+        const src = actx.createMediaElementSource(el);
+        src.connect(gainNode);
+      } catch(e) { console.warn('Audio source error:', e); }
+
+      songState[song.id] = { el, gainNode };
+    });
+
+    // Start all playing (gain controls volume)
+    SONGS.forEach(song => {
+      songState[song.id].el.play().catch(()=>{});
+    });
+
+    // Set initial equal weights for slots 0-3
+    setGains([0.25,0.25,0.25,0.25]);
+  }
+
+  function setGains(sw) {
+    if (!inited) return;
+    SONGS.forEach(song => {
+      const si = slotSong.indexOf(song.id);
+      if (si >= 0 && !crossfading.has(si)) {
+        songState[song.id].gainNode.gain.value = sw[si];
+      } else if (si < 0) {
+        songState[song.id].gainNode.gain.value = 0;
+      }
+    });
+  }
+
+  function swap(slotIndex, song, currentWeight) {
+    if (!inited) return;
+    const oldId = slotSong[slotIndex];
+    if (oldId === song.id) return;
+
+    const now = actx.currentTime;
+    const oldGain = songState[oldId]?.gainNode?.gain;
+    const newGain = songState[song.id]?.gainNode?.gain;
+    if (!oldGain || !newGain) return;
+
+    slotSong[slotIndex] = song.id;
+
+    if (currentWeight > 0.05) {
+      crossfading.add(slotIndex);
+      oldGain.cancelScheduledValues(now);
+      oldGain.setValueAtTime(currentWeight, now);
+      oldGain.linearRampToValueAtTime(0, now + 0.8);
+
+      newGain.cancelScheduledValues(now);
+      newGain.setValueAtTime(newGain.value, now);
+      newGain.linearRampToValueAtTime(currentWeight, now + 0.8);
+
+      setTimeout(() => crossfading.delete(slotIndex), 900);
+    }
+  }
+
+  function stopAll() { if (actx) actx.suspend(); }
+  function playAll() { if (actx) actx.resume(); }
+
+  return { init, setGains, swap, stopAll, playAll };
+})();
+
+// ─── DOM Rendering ────────────────────────────────────────────────────────────
+function renderLibrary() {
+  const lib = document.getElementById('song-library');
+  lib.innerHTML = '';
+  SONGS.forEach(song => {
+    const inSlot = slots.some(s => s.id === song.id);
+    const card = document.createElement('div');
+    card.className = 'song-card' + (inSlot ? ' active' : '');
+    card.style.borderLeftColor = song.color;
+    card.draggable = true;
+    card.dataset.id = song.id;
+
+    card.innerHTML = `
+      <img src="${song.art}" alt="" onerror="this.style.opacity='0.3'">
+      <div class="card-info">
+        <div class="card-title">${song.title}</div>
+        <div class="card-meta">${song.artist} · ${song.bpm} BPM · ${song.key}</div>
+      </div>
+      ${inSlot ? `<div class="song-wave">
+        <div class="wave-bar" style="background:${song.color}bb"></div>
+        <div class="wave-bar" style="background:${song.color}bb"></div>
+        <div class="wave-bar" style="background:${song.color}bb"></div>
+      </div>` : ''}
+    `;
+
+    card.addEventListener('dragstart', e => {
+      AudioEngine.init();
+      currentDragSong = song;
+      e.dataTransfer.setData('application/json', JSON.stringify(song));
+      e.dataTransfer.effectAllowed = 'move';
+      requestAnimationFrame(() => {
+        card.style.opacity = '0.92';
+        card.style.boxShadow = '0 0 0 1.5px rgba(255,255,255,0.5)';
+      });
+    });
+    card.addEventListener('dragend', () => {
+      currentDragSong = null;
+      card.style.opacity = '';
+      card.style.boxShadow = '';
+    });
+
+    lib.appendChild(card);
+  });
+}
+
+function renderSlots() {
+  const container = document.getElementById('track-slots');
+  container.innerHTML = '';
+  slots.forEach((song, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'track-slot';
+    slot.style.borderLeftColor = song.color;
+    slot.dataset.slot = i;
+
+    slot.innerHTML = `
+      <div class="slot-pct" id="slot-pct-${i}">25%</div>
+      <div class="slot-header">
+        <div class="slot-num">${i+1}</div>
+        <img class="slot-art" src="${song.art}" alt="" onerror="this.style.opacity='0.3'">
+        <div class="slot-info">
+          <div class="slot-title">${song.title}</div>
+          <div class="slot-meta">${song.bpm} BPM · ${song.key}</div>
+        </div>
+      </div>
+      <div class="slot-bar" id="slot-bar-${i}" style="background:${song.color}"></div>
+    `;
+
+    slot.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      slot.classList.add('dragover-active');
+      if (currentDragSong) {
+        slot.style.boxShadow = `inset 0 0 0 1.5px ${currentDragSong.color}, 0 0 18px ${currentDragSong.color}44`;
+      }
+    });
+
+    slot.addEventListener('dragleave', () => {
+      slot.classList.remove('dragover-active');
+      slot.style.boxShadow = '';
+    });
+
+    slot.addEventListener('drop', e => {
+      e.preventDefault();
+      slot.classList.remove('dragover-active');
+      slot.style.boxShadow = '';
+      try {
+        const incoming = JSON.parse(e.dataTransfer.getData('application/json'));
+        const outgoing = slots[i];
+        if (incoming.id === outgoing.id) return;
+
+        const weight = smoothWeights[i];
+        slots[i] = incoming;
+
+        if (window.orbital) orbital.setNodeColor(i, incoming.color);
+        AudioEngine.swap(i, incoming, weight);
+
+        renderLibrary();
+        renderSlots();
+      } catch(err) { console.error(err); }
+    });
+
+    container.appendChild(slot);
+  });
+}
+
+function updateSlotBars() {
+  for (let i = 0; i < 4; i++) {
+    const bar = document.getElementById('slot-bar-'+i);
+    const pct = document.getElementById('slot-pct-'+i);
+    if (bar) bar.style.width = (smoothWeights[i]*100)+'%';
+    if (pct) pct.textContent = Math.round(smoothWeights[i]*100)+'%';
+  }
+}
+
+let lastDomIdx = -1;
+function updateHUD() {
+  let maxW = 0, domIdx = 0;
+  for (let i = 0; i < 4; i++) { if (smoothWeights[i] > maxW) { maxW = smoothWeights[i]; domIdx = i; } }
+  const song = slots[domIdx];
+  if (!song) return;
+
+  const dot    = document.getElementById('hud-dot');
+  const track  = document.getElementById('hud-track');
+  const meta   = document.getElementById('hud-meta');
+  const status = document.getElementById('hud-status');
+
+  if (domIdx !== lastDomIdx) {
+    track.style.opacity = '0'; meta.style.opacity = '0';
+    setTimeout(() => {
+      track.textContent = song.title;
+      meta.textContent  = `${song.artist} · ${song.bpm} BPM`;
+      track.style.opacity = '1'; meta.style.opacity = '1';
+    }, 150);
+    dot.style.background = song.color;
+    lastDomIdx = domIdx;
+  }
+
+  if (paused) {
+    status.textContent = 'PAUSED'; status.className = 'hud-status paused'; status.style.color = '';
+  } else if (maxW > 0.85) {
+    status.textContent = 'LOCKED'; status.className = 'hud-status locked'; status.style.color = song.color+'99';
+  } else if (maxW < 0.6) {
+    status.textContent = 'BLENDING'; status.className = 'hud-status blending'; status.style.color = '';
+  } else {
+    status.textContent = ''; status.className = 'hud-status';
+  }
+}
+
+// ─── Orbital Canvas ───────────────────────────────────────────────────────────
+let orbital; // set after DOMContentLoaded
+
+function initOrbital() {
+  const canvas = document.getElementById('orbital-pad');
+  const ctx    = canvas.getContext('2d');
+  const W = 1000, H = 1000, cx = 500, cy = 500;
+  const R = 492; // min(W,H)/2 - 8
+  const D = (R - 26) / Math.SQRT2; // ≈ 329.5
+
+  const THRESHOLD    = 0.5;
+  const SNAP_R       = 38;   // gravity well radius
+  const CORNER_SNAP  = 52;   // snap-on-release radius
+  const DEAD_ZONE_R  = R * 0.18;
+
+  // Diagonal X node positions
+  const nodes = [
+    { x: cx+D, y: cy-D, color: slots[0].color }, // NE slot 0
+    { x: cx+D, y: cy+D, color: slots[1].color }, // SE slot 1
+    { x: cx-D, y: cy+D, color: slots[2].color }, // SW slot 2
+    { x: cx-D, y: cy-D, color: slots[3].color }, // NW slot 3
+  ];
+
+  // Pre-generate grain particles
+  const grain = nodes.map(() =>
+    Array.from({length:110}, () => ({
+      angle: Math.random()*Math.PI*2,
+      dist:  Math.sqrt(Math.random()), // bias toward centre
+      size:  0.3 + Math.random()*1.6,
+      baseAlpha: 0.3 + Math.random()*0.7,
+    }))
+  );
+
+  // Gravity well expanding rings
+  const rings = nodes.map(() => ({ active:false, r:0, alpha:0 }));
+
+  // Node glow flare multiplier (>1 = flash)
+  const flare = [1,1,1,1];
+
+  // Physics state
+  let pos    = { x:cx, y:cy };
+  let tgt    = { x:cx, y:cy };
+  let vx = 0, vy = 0;
+  let dragging = false;
+
+  // Corner snap animation
+  let snapping = false, snapFrom = null, snapTo = null, snapT = 0, snapNodeIdx = -1;
+
+  // Dead zone transition (0=normal, 1=full dead zone)
+  let dzLerp = 0;
+
+  // Target weights (raw, before smoothing)
+  const rawW = new Float32Array(4);
+
+  // ── Weight computation ─────────────────────────────────────────────────────
+  function computeRaw(px, py) {
+    const dx = px-cx, dy = py-cy;
+    const nd = Math.sqrt(dx*dx+dy*dy) / R;
+
+    const wI = new Float32Array(4);
+    let sumI = 0;
+    for (let i = 0; i < 4; i++) {
+      const d2 = Math.pow(dist(px,py,nodes[i].x,nodes[i].y), 2);
+      wI[i] = 1 / Math.max(d2, 1e-6);
+      sumI += wI[i];
+    }
+    for (let i = 0; i < 4; i++) wI[i] /= sumI;
+
+    if (nd <= THRESHOLD) return wI;
+
+    const angle = Math.atan2(dy,dx) * 180/Math.PI;
+    const wO = new Float32Array(4);
+
+    if (angle >= -135 && angle < -45) {
+      // Top sector: NW(3) ↔ NE(0)
+      const t = (angle+135)/90;
+      wO[3] = 1-t; wO[0] = t;
+    } else if (angle >= -45 && angle < 45) {
+      // Right sector: NE(0) ↔ SE(1)
+      const t = (angle+45)/90;
+      wO[0] = 1-t; wO[1] = t;
+    } else if (angle >= 45 && angle < 135) {
+      // Bottom sector: SE(1) ↔ SW(2)
+      const t = (angle-45)/90;
+      wO[1] = 1-t; wO[2] = t;
+    } else {
+      // Left sector: SW(2) ↔ NW(3)
+      const na = angle >= 0 ? angle : angle+360;
+      const t = clamp((na-135)/90, 0, 1);
+      wO[2] = 1-t; wO[3] = t;
+    }
+
+    const blendT = smoothstep((nd-THRESHOLD)/(1-THRESHOLD));
+    const result = new Float32Array(4);
+    for (let i = 0; i < 4; i++) result[i] = wI[i]*(1-blendT) + wO[i]*blendT;
+    return result;
+  }
+
+  // ── Physics ────────────────────────────────────────────────────────────────
+  function updatePhysics() {
+    if (snapping) {
+      snapT = Math.min(snapT + 1/(0.280*60), 1);
+      const t = easeOutCubic(snapT);
+      pos.x = snapFrom.x + (snapTo.x - snapFrom.x)*t;
+      pos.y = snapFrom.y + (snapTo.y - snapFrom.y)*t;
+      vx = vy = 0;
+      if (snapT >= 1) {
+        snapping = false;
+        // Lock weights
+        for (let i = 0; i < 4; i++) smoothWeights[i] = i===snapNodeIdx ? 1 : 0;
+        flare[snapNodeIdx] = 1.5;
+      }
+      return;
+    }
+
+    // Gravity wells
+    for (let i = 0; i < 4; i++) {
+      const d = dist(pos.x,pos.y,nodes[i].x,nodes[i].y);
+      if (d < SNAP_R) {
+        const falloff = 1 - d/SNAP_R;
+        vx += (nodes[i].x - pos.x)*0.045*falloff;
+        vy += (nodes[i].y - pos.y)*0.045*falloff;
+        // Slow incoming movement (applied via reduced spring response — already handled)
+        if (!rings[i].active) rings[i] = { active:true, r:0, alpha:0.12 };
+      }
+    }
+
+    // Spring
+    vx = (vx + (tgt.x - pos.x)*0.09) * 0.80;
+    vy = (vy + (tgt.y - pos.y)*0.09) * 0.80;
+
+    pos.x += vx;
+    pos.y += vy;
+
+    // Edge resistance: near boundary, dampen outward velocity
+    {
+      const dx2=pos.x-cx, dy2=pos.y-cy;
+      const d2 = Math.sqrt(dx2*dx2+dy2*dy2);
+      if (d2 > R-28 && d2 > 0) {
+        const nx=dx2/d2, ny=dy2/d2;
+        const outward = vx*nx + vy*ny;
+        if (outward > 0) { vx -= outward*nx*0.7; vy -= outward*ny*0.7; }
+      }
+    }
+
+    // Hard boundary bounce
+    {
+      const dx=pos.x-cx, dy=pos.y-cy;
+      const d = Math.sqrt(dx*dx+dy*dy);
+      if (d > R-14) {
+        const nx=dx/d, ny=dy/d;
+        pos.x = cx + nx*(R-14);
+        pos.y = cy + ny*(R-14);
+        const outward = vx*nx + vy*ny;
+        if (outward > 0) { vx -= outward*nx*(1+0.28); vy -= outward*ny*(1+0.28); }
+      }
+    }
+  }
+
+  // ── Weights ────────────────────────────────────────────────────────────────
+  function updateWeights() {
+    const raw = computeRaw(pos.x, pos.y);
+
+    const dzDist = dist(pos.x,pos.y,cx,cy);
+    const inDead = dzDist < DEAD_ZONE_R;
+    dzLerp = inDead ? Math.min(dzLerp + 1/12, 1) : 0;
+
+    const speed = Math.sqrt(vx*vx + vy*vy);
+    const wLerp = 0.14 - clamp(speed/10, 0, 1)*0.10;
+
+    for (let i = 0; i < 4; i++) {
+      const tgt = raw[i]*(1-dzLerp) + 0.25*dzLerp;
+      smoothWeights[i] += (tgt - smoothWeights[i]) * wLerp;
+    }
+
+    // Normalise
+    let sum = 0;
+    for (let i = 0; i < 4; i++) sum += smoothWeights[i];
+    if (sum > 0) for (let i = 0; i < 4; i++) smoothWeights[i] /= sum;
+  }
+
+  // ── Rendering ──────────────────────────────────────────────────────────────
+  function render(ts) {
+    ctx.clearRect(0, 0, W, H);
+    const pulse = Math.sin(ts*0.0008)*0.12 + 0.88;
+
+    // ── Pad background (clipped to circle) ──
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.clip();
+
+    ctx.fillStyle = '#191919'; ctx.fill();
+
+    ctx.beginPath(); ctx.arc(cx,cy,R*THRESHOLD,0,Math.PI*2);
+    ctx.fillStyle = '#131313'; ctx.fill();
+
+    // Dead zone hint
+    ctx.beginPath(); ctx.arc(cx,cy,DEAD_ZONE_R,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
+
+    // Concentric rings
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=0.5;
+    for (let r=55; r<R; r+=55) {
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+    }
+
+    // X guide lines (diagonal)
+    ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx-R,cy-R); ctx.lineTo(cx+R,cy+R);
+    ctx.moveTo(cx+R,cy-R); ctx.lineTo(cx-R,cy+R);
+    ctx.stroke();
+
+    // Dot grid
+    ctx.fillStyle='rgba(255,255,255,0.07)';
+    for (let gx=0; gx<=W; gx+=20) {
+      for (let gy=0; gy<=H; gy+=20) {
+        if (dist(gx,gy,cx,cy) < R) {
+          ctx.beginPath(); ctx.arc(gx,gy,1.2,0,Math.PI*2); ctx.fill();
+        }
+      }
+    }
+    ctx.restore();
+
+    // Inner zone dashed ring
+    ctx.save();
+    ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.arc(cx,cy,R*THRESHOLD,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.10)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Border glow (weighted colour mix)
+    {
+      let r=0,g=0,b=0;
+      nodes.forEach((nd,i) => { const c=hexRgb(nd.color); r+=c.r*smoothWeights[i]; g+=c.g*smoothWeights[i]; b+=c.b*smoothWeights[i]; });
+      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.35)`;
+      ctx.lineWidth=3; ctx.stroke();
+    }
+
+    // Gravity well rings
+    rings.forEach((ring,i) => {
+      if (!ring.active) return;
+      ring.r += 2; ring.alpha -= 0.003;
+      if (ring.r >= SNAP_R || ring.alpha <= 0) { ring.active=false; return; }
+      ctx.beginPath(); ctx.arc(nodes[i].x,nodes[i].y,ring.r,0,Math.PI*2);
+      ctx.strokeStyle = hexA(nodes[i].color, ring.alpha);
+      ctx.lineWidth=1; ctx.stroke();
+    });
+
+    // Connection lines (cursor → each node)
+    nodes.forEach((nd,i) => {
+      ctx.beginPath(); ctx.moveTo(pos.x,pos.y); ctx.lineTo(nd.x,nd.y);
+      ctx.strokeStyle = hexA(nd.color, smoothWeights[i]*0.5);
+      ctx.lineWidth = 0.5 + smoothWeights[i]*2.5;
+      ctx.stroke();
+    });
+
+    // Track nodes
+    nodes.forEach((nd,i) => {
+      const f = flare[i] > 1 ? flare[i] : 1;
+      if (flare[i] > 1) flare[i] = Math.max(1, flare[i]-0.04);
+      const glowR = (32 + smoothWeights[i]*22) * pulse * f;
+
+      // Layer 1: wide feathered glow
+      let gr = ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR);
+      gr.addColorStop(0.00, hexA(nd.color,0.60));
+      gr.addColorStop(0.30, hexA(nd.color,0.30));
+      gr.addColorStop(0.65, hexA(nd.color,0.08));
+      gr.addColorStop(1.00, hexA(nd.color,0.00));
+      ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR,0,Math.PI*2);
+      ctx.fillStyle=gr; ctx.fill();
+
+      // Layer 2: inner bright core
+      gr = ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR*0.42);
+      gr.addColorStop(0, hexA(nd.color,0.95));
+      gr.addColorStop(1, hexA(nd.color,0));
+      ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR*0.42,0,Math.PI*2);
+      ctx.fillStyle=gr; ctx.fill();
+
+      // Layer 3: white specular flash
+      const specA = 0.55 + smoothWeights[i]*0.30;
+      gr = ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR*0.18);
+      gr.addColorStop(0, `rgba(255,255,255,${specA})`);
+      gr.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR*0.18,0,Math.PI*2);
+      ctx.fillStyle=gr; ctx.fill();
+
+      // Layer 4: grain
+      grain[i].forEach(p => {
+        const pr = p.dist*glowR;
+        const gx = nd.x + Math.cos(p.angle)*pr;
+        const gy = nd.y + Math.sin(p.angle)*pr;
+        const a  = p.baseAlpha*(1-p.dist*0.85)*(smoothWeights[i]*0.65+0.35)*pulse*0.50;
+        ctx.fillStyle=`rgba(255,255,255,${a})`;
+        ctx.fillRect(gx,gy,p.size,p.size);
+      });
+
+      // Centre dot
+      ctx.beginPath(); ctx.arc(nd.x,nd.y,3,0,Math.PI*2);
+      ctx.fillStyle='#fff'; ctx.fill();
+    });
+
+    // Cursor
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,24,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.14)'; ctx.lineWidth=1; ctx.stroke();
+
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,18,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.fill();
+
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,3,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fill();
+  }
+
+  // ── Input ──────────────────────────────────────────────────────────────────
+  function toLocal(cx2,cy2) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: (cx2-rect.left) * (W/rect.width),
+      y: (cy2-rect.top)  * (H/rect.height),
+    };
+  }
+
+  function clampToPad(x,y) {
+    const dx=x-cx, dy=y-cy;
+    const d=Math.sqrt(dx*dx+dy*dy), maxR=R-14;
+    if (d<=maxR) return {x,y};
+    return { x:cx+dx/d*maxR, y:cy+dy/d*maxR };
+  }
+
+  canvas.addEventListener('mousedown', e => {
+    e.preventDefault();
+    dragging=true; snapping=false;
+    const p=toLocal(e.clientX,e.clientY);
+    tgt=clampToPad(p.x,p.y);
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const p=toLocal(e.clientX,e.clientY);
+    tgt=clampToPad(p.x,p.y);
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging=false;
+
+    // Corner snap check
+    let closest=Infinity, cIdx=-1;
+    nodes.forEach((nd,i) => {
+      const d=dist(pos.x,pos.y,nd.x,nd.y);
+      if (d < CORNER_SNAP && d < closest) { closest=d; cIdx=i; }
+    });
+    if (cIdx >= 0) {
+      snapping=true;
+      snapFrom={x:pos.x,y:pos.y};
+      snapTo={x:nodes[cIdx].x,y:nodes[cIdx].y};
+      snapT=0; snapNodeIdx=cIdx;
+      tgt={...snapTo};
+    }
+  });
+
+  // ── Main loop ──────────────────────────────────────────────────────────────
+  function loop(ts) {
+    updatePhysics();
+    updateWeights();
+    render(ts);
+    AudioEngine.setGains(smoothWeights);
+    updateSlotBars();
+    updateHUD();
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+
+  // Public API
+  return {
+    setNodeColor(slotIdx, color) { nodes[slotIdx].color = color; },
+  };
+}
+
+// ─── Spacebar toggle ─────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.code==='Space' && e.target.tagName!=='INPUT') {
+    e.preventDefault();
+    paused = !paused;
+    if (paused) AudioEngine.stopAll(); else AudioEngine.playAll();
+  }
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderLibrary();
+  renderSlots();
+  window.orbital = initOrbital();
+});
+</script>
+</body>
+</html>
