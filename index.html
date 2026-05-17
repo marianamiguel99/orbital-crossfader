@@ -201,12 +201,12 @@ html, body {
 <script>
 // ─── Song data ────────────────────────────────────────────────────────────────
 const SONGS = [
-  { id:'a', title:'Solar Wind', artist:'Orbital A', bpm:126, key:'4A', color:'#F2B600', art:'assets/art-a.jpeg', file:'assets/track-a.mpeg' },
-  { id:'b', title:'Deep Pulse', artist:'Orbital B', bpm:128, key:'5A', color:'#00CCCA', art:'assets/art-b.jpeg', file:'assets/track-b.mpeg' },
-  { id:'c', title:'Gravity',    artist:'Orbital C', bpm:124, key:'4B', color:'#6A4DFF', art:'assets/art-c.jpeg', file:'assets/track-c.mpeg' },
-  { id:'d', title:'Vortex',     artist:'Orbital D', bpm:128, key:'3A', color:'#F27900', art:'assets/art-d.jpeg', file:'assets/track-d.mpeg' },
-  { id:'e', title:'Meridian',   artist:'Orbital E', bpm:126, key:'6A', color:'#F2B600', art:'assets/art-e.jpeg', file:'assets/track-e.mpeg' },
-  { id:'f', title:'Undertow',   artist:'Orbital F', bpm:130, key:'5B', color:'#00CCCA', art:'assets/art-f.jpeg', file:'assets/track-f.mpeg' },
+  { id:'a', title:'Solar Wind', artist:'Orbital A', bpm:126, key:'4A', color:'#F2B600', art:'assets/art-a.jpeg', file:'assets/track-a.mp3' },
+  { id:'b', title:'Deep Pulse', artist:'Orbital B', bpm:128, key:'5A', color:'#00CCCA', art:'assets/art-b.jpeg', file:'assets/track-b.mp3' },
+  { id:'c', title:'Gravity',    artist:'Orbital C', bpm:124, key:'4B', color:'#6A4DFF', art:'assets/art-c.jpeg', file:'assets/track-c.mp3' },
+  { id:'d', title:'Vortex',     artist:'Orbital D', bpm:128, key:'3A', color:'#F27900', art:'assets/art-d.jpeg', file:'assets/track-d.mp3' },
+  { id:'e', title:'Meridian',   artist:'Orbital E', bpm:126, key:'6A', color:'#F2B600', art:'assets/art-e.jpeg', file:'assets/track-e.mp3' },
+  { id:'f', title:'Undertow',   artist:'Orbital F', bpm:130, key:'5B', color:'#00CCCA', art:'assets/art-f.jpeg', file:'assets/track-f.mp3' },
 ];
 const SONG_MAP = Object.fromEntries(SONGS.map(s => [s.id, s]));
 
@@ -237,96 +237,50 @@ function smoothstep(t){ t=clamp(t,0,1); return t*t*(3-2*t); }
 function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
 
 // ─── Audio Engine ─────────────────────────────────────────────────────────────
+// ─── Audio Engine — direct .volume, works from file:// ───────────────────────
 const AudioEngine = (() => {
-  let actx = null;
-  let masterGain = null;
-  let inited = false;
+  let started = false;
+  const els = {};           // songId → HTMLAudioElement
+  const slotSong = ['a','b','c','d']; // which song is in each slot
 
-  // Per-song state: { gainNode, el }
-  const songState = {};
-  // Which song id is in each slot
-  const slotSong = ['a','b','c','d'];
-  // Slots currently mid-crossfade (skip gain updates)
-  const crossfading = new Set();
-
-  function init() {
-    if (inited) return;
-    inited = true;
-
-    actx = new (window.AudioContext || window.webkitAudioContext)();
-    masterGain = actx.createGain();
-    masterGain.gain.value = 0.85;
-    masterGain.connect(actx.destination);
-
-    SONGS.forEach(song => {
-      const el = document.createElement('audio');
-      el.src = song.file;
+  function preload() {
+    SONGS.forEach(s => {
+      const el = new Audio(s.file);
       el.loop = true;
-      document.body.appendChild(el);
-
-      const gainNode = actx.createGain();
-      gainNode.gain.value = 0;
-      gainNode.connect(masterGain);
-
-      try {
-        const src = actx.createMediaElementSource(el);
-        src.connect(gainNode);
-      } catch(e) { console.warn('Audio source error:', e); }
-
-      songState[song.id] = { el, gainNode };
+      el.volume = 0;
+      el.preload = 'auto';
+      els[s.id] = el;
     });
-
-    // Start all playing (gain controls volume)
-    SONGS.forEach(song => {
-      songState[song.id].el.play().catch(()=>{});
-    });
-
-    // Set initial equal weights for slots 0-3
-    setGains([0.25,0.25,0.25,0.25]);
   }
 
+  function start() {
+    if (started) return;
+    started = true;
+    SONGS.forEach(s => {
+      els[s.id].play().catch(err => console.warn('Audio play blocked:', s.id, err));
+    });
+  }
+
+  // Called every frame from the render loop — smoothWeights drive volume directly
   function setGains(sw) {
-    if (!inited) return;
-    SONGS.forEach(song => {
-      const si = slotSong.indexOf(song.id);
-      if (si >= 0 && !crossfading.has(si)) {
-        songState[song.id].gainNode.gain.value = sw[si];
-      } else if (si < 0) {
-        songState[song.id].gainNode.gain.value = 0;
-      }
+    if (!started) return;
+    SONGS.forEach(s => {
+      const si = slotSong.indexOf(s.id);
+      const target = si >= 0 ? clamp(sw[si] * 0.85, 0, 1) : 0;
+      // Lerp toward target each frame for extra smoothness
+      els[s.id].volume += (target - els[s.id].volume) * 0.12;
     });
   }
 
-  function swap(slotIndex, song, currentWeight) {
-    if (!inited) return;
-    const oldId = slotSong[slotIndex];
-    if (oldId === song.id) return;
-
-    const now = actx.currentTime;
-    const oldGain = songState[oldId]?.gainNode?.gain;
-    const newGain = songState[song.id]?.gainNode?.gain;
-    if (!oldGain || !newGain) return;
-
-    slotSong[slotIndex] = song.id;
-
-    if (currentWeight > 0.05) {
-      crossfading.add(slotIndex);
-      oldGain.cancelScheduledValues(now);
-      oldGain.setValueAtTime(currentWeight, now);
-      oldGain.linearRampToValueAtTime(0, now + 0.8);
-
-      newGain.cancelScheduledValues(now);
-      newGain.setValueAtTime(newGain.value, now);
-      newGain.linearRampToValueAtTime(currentWeight, now + 0.8);
-
-      setTimeout(() => crossfading.delete(slotIndex), 900);
-    }
+  function swap(slotIdx, song) {
+    // Just reassign — setGains handles the volume fade automatically
+    slotSong[slotIdx] = song.id;
   }
 
-  function stopAll() { if (actx) actx.suspend(); }
-  function playAll() { if (actx) actx.resume(); }
+  function stopAll() { SONGS.forEach(s => { try { els[s.id].pause(); } catch(e) {} }); }
+  function playAll() { SONGS.forEach(s => { els[s.id].play().catch(()=>{}); }); }
 
-  return { init, setGains, swap, stopAll, playAll };
+  return { preload, start, setGains, swap, stopAll, playAll };
 })();
 
 // ─── DOM Rendering ────────────────────────────────────────────────────────────
@@ -355,7 +309,7 @@ function renderLibrary() {
     `;
 
     card.addEventListener('dragstart', e => {
-      AudioEngine.init();
+      AudioEngine.start();
       currentDragSong = song;
       e.dataTransfer.setData('application/json', JSON.stringify(song));
       e.dataTransfer.effectAllowed = 'move';
@@ -419,11 +373,10 @@ function renderSlots() {
         const outgoing = slots[i];
         if (incoming.id === outgoing.id) return;
 
-        const weight = smoothWeights[i];
         slots[i] = incoming;
 
         if (window.orbital) orbital.setNodeColor(i, incoming.color);
-        AudioEngine.swap(i, incoming, weight);
+        AudioEngine.swap(i, incoming);
 
         renderLibrary();
         renderSlots();
@@ -913,10 +866,15 @@ document.addEventListener('keydown', e => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  AudioEngine.preload();
   renderLibrary();
   renderSlots();
   window.orbital = initOrbital();
 });
+
+// Start audio on first click or drag anywhere — handles Chrome autoplay policy
+document.addEventListener('click',    () => AudioEngine.start(), { once: true });
+document.addEventListener('dragstart', () => AudioEngine.start(), { once: true });
 </script>
 </body>
 </html>
