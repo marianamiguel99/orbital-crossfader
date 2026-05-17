@@ -660,6 +660,26 @@ function initOrbital() {
   let dzLerp = 0;
   let currentZoneBlend = 0;
 
+  // Hover ghost — shows where the ball will drop before the user clicks
+  let hoverPos = null;
+
+  // Eased drop animation — kicks in on click; duration scales with distance
+  // so a far drop glides slowly along the path, a near drop is snappy.
+  let animActive = false;
+  let animFrom = { x:0, y:0 }, animTo = { x:0, y:0 };
+  let animStart = 0, animDur = 0;
+  function easeInOutCubic(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; }
+  function startAnimTo(x, y, now) {
+    animFrom = { x: pos.x, y: pos.y };
+    animTo   = { x, y };
+    const d  = dist(pos.x, pos.y, x, y);
+    // Diameter ~430px; clamp duration to 220-720ms
+    animDur   = clamp(200 + d * 1.45, 220, 720);
+    animStart = now;
+    animActive = true;
+    vx = vy = 0;
+  }
+
   function computeRaw(px, py) {
     const dx = px-cx, dy = py-cy;
     const nd = Math.sqrt(dx*dx+dy*dy) / R;
@@ -688,7 +708,7 @@ function initOrbital() {
     return { w: result, zoneBlend: blendT };
   }
 
-  function updatePhysics() {
+  function updatePhysics(now) {
     if (snapping) {
       snapT = Math.min(snapT + 1/(0.280*60), 1);
       const t = easeOutCubic(snapT);
@@ -703,38 +723,36 @@ function initOrbital() {
       return;
     }
 
+    // Track magnetism — visual ring ping when near a node (no velocity nudge
+    // anymore; the corner snap on release handles the actual locking)
     for (let i = 0; i < 4; i++) {
       const d = dist(pos.x,pos.y,nodes[i].x,nodes[i].y);
-      if (d < SNAP_R) {
-        const f = 1 - d/SNAP_R;
-        vx += (nodes[i].x - pos.x)*0.045*f;
-        vy += (nodes[i].y - pos.y)*0.045*f;
-        if (!rings[i].active) rings[i] = { active:true, r:0, alpha:0.12 };
+      if (d < SNAP_R && !rings[i].active) {
+        rings[i] = { active:true, r:0, alpha:0.12 };
       }
     }
 
-    vx = (vx + (tgt.x - pos.x)*0.09) * 0.80;
-    vy = (vy + (tgt.y - pos.y)*0.09) * 0.80;
-    pos.x += vx; pos.y += vy;
-
-    { // Edge resistance
-      const dx2=pos.x-cx, dy2=pos.y-cy;
-      const d2=Math.sqrt(dx2*dx2+dy2*dy2);
-      if (d2 > R-28 && d2 > 0) {
-        const nx=dx2/d2, ny=dy2/d2;
-        const out=vx*nx+vy*ny;
-        if (out>0) { vx-=out*nx*0.7; vy-=out*ny*0.7; }
-      }
+    if (animActive) {
+      // Eased glide to clicked point — duration scales with distance, ease-in-out
+      // makes the cursor "delay" at the start and settle softly at the end.
+      const t = clamp((now - animStart) / animDur, 0, 1);
+      const e = easeInOutCubic(t);
+      pos.x = animFrom.x + (animTo.x - animFrom.x) * e;
+      pos.y = animFrom.y + (animTo.y - animFrom.y) * e;
+      if (t >= 1) animActive = false;
+    } else if (dragging) {
+      // Smooth critically-damped follow during continued drag — no overshoot
+      pos.x += (tgt.x - pos.x) * 0.22;
+      pos.y += (tgt.y - pos.y) * 0.22;
     }
-    { // Hard boundary
-      const dx=pos.x-cx, dy=pos.y-cy;
-      const d=Math.sqrt(dx*dx+dy*dy);
-      if (d > R-14) {
-        const nx=dx/d, ny=dy/d;
-        pos.x=cx+nx*(R-14); pos.y=cy+ny*(R-14);
-        const out=vx*nx+vy*ny;
-        if (out>0) { vx-=out*nx*1.28; vy-=out*ny*1.28; }
-      }
+    // else: idle — pos stays put
+
+    // Hard boundary
+    const dx=pos.x-cx, dy=pos.y-cy;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if (d > R-14 && d > 0) {
+      const nx=dx/d, ny=dy/d;
+      pos.x=cx+nx*(R-14); pos.y=cy+ny*(R-14);
     }
   }
 
@@ -927,7 +945,31 @@ function initOrbital() {
       ctx.fillText(String(i+1), lx, ly);
     });
 
-    // Cursor
+    // Ghost cursor — previews where the ball will land on click.
+    // Only when hovering (not dragging, not snapping) and meaningfully
+    // distant from the live cursor.
+    if (hoverPos && !dragging && !snapping &&
+        dist(hoverPos.x, hoverPos.y, pos.x, pos.y) > 10) {
+      ctx.save();
+      // dashed outer ring
+      ctx.beginPath(); ctx.arc(hoverPos.x, hoverPos.y, 14, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // soft fill hint
+      ctx.beginPath(); ctx.arc(hoverPos.x, hoverPos.y, 12, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fill();
+      // tiny centre dot
+      ctx.beginPath(); ctx.arc(hoverPos.x, hoverPos.y, 2, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Live cursor
     ctx.beginPath(); ctx.arc(pos.x,pos.y,20,0,Math.PI*2);
     ctx.strokeStyle='rgba(255,255,255,0.14)'; ctx.lineWidth=1; ctx.stroke();
     ctx.beginPath(); ctx.arc(pos.x,pos.y,14,0,Math.PI*2);
@@ -946,13 +988,33 @@ function initOrbital() {
     return { x:cx+dx/d*maxR, y:cy+dy/d*maxR };
   }
 
-  canvas.addEventListener('mousedown', e => {
-    e.preventDefault(); dragging=true; snapping=false;
-    tgt=clampToPad(...Object.values(toLocal(e.clientX,e.clientY)));
+  // Hover: track cursor inside the pad for ghost rendering
+  canvas.addEventListener('mousemove', e => {
+    if (dragging) return;
+    const local = toLocal(e.clientX, e.clientY);
+    const dCentre = dist(local.x, local.y, cx, cy);
+    hoverPos = (dCentre <= R - 14) ? { x: local.x, y: local.y } : null;
   });
+  canvas.addEventListener('mouseleave', () => { hoverPos = null; });
+
+  // Click: start an eased glide from current pos to clicked point
+  canvas.addEventListener('mousedown', e => {
+    e.preventDefault();
+    dragging = true; snapping = false; hoverPos = null;
+    const local = toLocal(e.clientX, e.clientY);
+    tgt = clampToPad(local.x, local.y);
+    startAnimTo(tgt.x, tgt.y, performance.now());
+  });
+
+  // Drag: update target. If user actually moves (>5px from click point),
+  // cancel the eased anim and let smooth-follow take over.
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
-    tgt=clampToPad(...Object.values(toLocal(e.clientX,e.clientY)));
+    const local = toLocal(e.clientX, e.clientY);
+    tgt = clampToPad(local.x, local.y);
+    if (animActive && dist(local.x, local.y, animTo.x, animTo.y) > 5) {
+      animActive = false;
+    }
   });
   document.addEventListener('mouseup', () => {
     if (!dragging) return; dragging=false;
@@ -969,7 +1031,7 @@ function initOrbital() {
   });
 
   function loop(ts) {
-    updatePhysics();
+    updatePhysics(ts);
     updateWeights();
     render(ts);
     AudioEngine.setGains(smoothWeights);
