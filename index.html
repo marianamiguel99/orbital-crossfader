@@ -331,7 +331,6 @@ function renderLibrary() {
     const card = document.createElement('div');
     card.className = 'song-card' + (inSlot ? ' active' : '');
     card.style.borderLeftColor = song.color;
-    card.draggable = true;
     card.dataset.songId = song.id;
     card.innerHTML = `
       <img draggable="false" src="${song.art}" alt="" onerror="this.style.opacity='0.3'">
@@ -345,14 +344,7 @@ function renderLibrary() {
         <div class="wave-bar" style="background:${song.color}bb"></div>
       </div>` : ''}
     `;
-    // dragstart: NO DOM mutations — only set data. DOM changes during dragstart
-    // cancel the drag in Chrome.
-    card.addEventListener('dragstart', e => {
-      currentDragSong = song;
-      e.dataTransfer.setData('text/plain', song.id);
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    card.addEventListener('dragend', () => { currentDragSong = null; });
+    card.addEventListener('mousedown', e => startPointerDrag(e, song, card));
     lib.appendChild(card);
   });
 }
@@ -377,57 +369,113 @@ function renderSlots() {
       </div>
       <div class="slot-bar" id="slot-bar-${i}" style="background:${song.color}"></div>
     `;
-    // Highlight on dragenter/dragleave — visual only, no drop logic here.
-    slot.addEventListener('dragenter', e => {
-      e.preventDefault();
-      slot.classList.add('dragover-active');
-      if (currentDragSong) slot.style.boxShadow = `inset 0 0 0 1.5px ${currentDragSong.color}, 0 0 18px ${currentDragSong.color}44`;
-    });
-    slot.addEventListener('dragleave', e => {
-      if (!slot.contains(e.relatedTarget)) {
-        slot.classList.remove('dragover-active');
-        slot.style.boxShadow = '';
-      }
-    });
-    slot.addEventListener('dragover', e => e.preventDefault());
     container.appendChild(slot);
   });
 }
 
-// ─── Document-level drop handler (most reliable approach) ─────────────────────
-// Catches all drops regardless of which child element the cursor lands on.
-document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop', e => {
+// ─── Pointer-based drag system (replaces HTML5 DnD — reliable from file://) ──
+// Ghost element follows the cursor; slot under cursor is highlighted live;
+// release over a slot swaps the track.
+let dragState = null;
+
+function startPointerDrag(e, song, sourceCard) {
+  if (e.button !== 0) return;
   e.preventDefault();
-  const songId = e.dataTransfer.getData('text/plain');
-  if (!songId) return;
-  const incoming = SONG_MAP[songId];
-  if (!incoming) return;
 
-  // Walk up from drop target to find the slot element
-  let el = e.target;
-  while (el && el !== document.body) {
-    if (el.dataset && el.dataset.slot !== undefined) break;
-    el = el.parentElement;
+  const rect = sourceCard.getBoundingClientRect();
+  const offX = e.clientX - rect.left;
+  const offY = e.clientY - rect.top;
+
+  // Clone the card as the ghost
+  const ghost = sourceCard.cloneNode(true);
+  ghost.style.cssText = `
+    position: fixed;
+    left: ${e.clientX - offX}px;
+    top: ${e.clientY - offY}px;
+    width: ${rect.width}px;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.92;
+    transform: scale(1.04) rotate(-1deg);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.6), 0 0 0 1px ${song.color}66, 0 0 24px ${song.color}55;
+    background: rgba(40,40,40,0.95);
+    border-left: 3px solid ${song.color};
+    cursor: grabbing;
+    transition: none;
+  `;
+  document.body.appendChild(ghost);
+
+  // Dim the source
+  sourceCard.style.opacity = '0.35';
+  document.body.style.cursor = 'grabbing';
+  document.body.style.userSelect = 'none';
+
+  dragState = { song, ghost, sourceCard, offX, offY, hoverSlot: -1 };
+
+  document.addEventListener('mousemove', onPointerMove);
+  document.addEventListener('mouseup',   onPointerUp);
+}
+
+function slotIndexAt(clientX, clientY) {
+  const slots = document.querySelectorAll('.track-slot');
+  for (let i = 0; i < slots.length; i++) {
+    const r = slots[i].getBoundingClientRect();
+    if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+      return i;
+    }
   }
+  return -1;
+}
 
-  // Clear all slot highlights
+function onPointerMove(e) {
+  if (!dragState) return;
+  const { ghost, offX, offY, song } = dragState;
+  ghost.style.left = (e.clientX - offX) + 'px';
+  ghost.style.top  = (e.clientY - offY) + 'px';
+
+  const idx = slotIndexAt(e.clientX, e.clientY);
+  if (idx !== dragState.hoverSlot) {
+    document.querySelectorAll('.track-slot').forEach(s => {
+      s.classList.remove('dragover-active');
+      s.style.boxShadow = '';
+    });
+    if (idx >= 0) {
+      const slot = document.querySelectorAll('.track-slot')[idx];
+      slot.classList.add('dragover-active');
+      slot.style.boxShadow = `inset 0 0 0 1.5px ${song.color}, 0 0 18px ${song.color}55`;
+    }
+    dragState.hoverSlot = idx;
+  }
+}
+
+function onPointerUp(e) {
+  if (!dragState) return;
+  const { ghost, sourceCard, song } = dragState;
+  const idx = slotIndexAt(e.clientX, e.clientY);
+
+  // Cleanup
+  ghost.remove();
+  sourceCard.style.opacity = '';
+  document.body.style.cursor = '';
+  document.body.style.userSelect = '';
   document.querySelectorAll('.track-slot').forEach(s => {
     s.classList.remove('dragover-active');
     s.style.boxShadow = '';
   });
+  document.removeEventListener('mousemove', onPointerMove);
+  document.removeEventListener('mouseup',   onPointerUp);
+  dragState = null;
 
-  if (!el || el.dataset.slot === undefined) return;
-  const i = parseInt(el.dataset.slot);
-  if (incoming.id === slots[i].id) return;
+  if (idx < 0) return;
+  if (slots[idx].id === song.id) return;
 
-  slots[i] = incoming;
-  if (window.orbital) orbital.setNodeColor(i, incoming.color);
-  AudioEngine.swap(i, incoming);
-  AudioEngine.start(); // safe here — drop is a user gesture, DOM change won't cancel anything
+  slots[idx] = song;
+  if (window.orbital) orbital.setNodeColor(idx, song.color);
+  AudioEngine.swap(idx, song);
+  AudioEngine.start();
   renderLibrary();
   renderSlots();
-});
+}
 
 function updateSlotBars() {
   for (let i = 0; i < 4; i++) {
