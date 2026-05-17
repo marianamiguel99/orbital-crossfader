@@ -96,13 +96,13 @@ html, body {
 /* ── Orbital Wrap ── */
 #orbital-wrap {
   position: absolute;
-  left: 595px; top: -129px;
-  width: 1000px; height: 1000px;
+  left: 743px; top: 37px;
+  width: 640px; height: 640px;
   overflow: visible;
   z-index: 10;
 }
 #orbital-pad {
-  width: 1000px; height: 1000px;
+  width: 640px; height: 640px;
   display: block;
   cursor: none;
 }
@@ -188,7 +188,7 @@ html, body {
   <div id="chrome"></div>
   <div id="song-library"></div>
   <div id="orbital-wrap">
-    <canvas id="orbital-pad" width="1000" height="1000"></canvas>
+    <canvas id="orbital-pad" width="640" height="640"></canvas>
   </div>
   <div id="track-slots"></div>
   <div id="hud">
@@ -483,13 +483,13 @@ let orbital; // set after DOMContentLoaded
 function initOrbital() {
   const canvas = document.getElementById('orbital-pad');
   const ctx    = canvas.getContext('2d');
-  const W = 1000, H = 1000, cx = 500, cy = 500;
-  const R = 492; // min(W,H)/2 - 8
-  const D = R - 26; // 466 — cardinal radius from centre to node
+  const W = 640, H = 640, cx = 320, cy = 320;
+  const R = 304; // circle radius — leaves 16px padding in 640px canvas
+  const D = 278; // node distance from centre (R - 26)
 
   const THRESHOLD    = 0.5;
-  const SNAP_R       = 38;   // gravity well radius
-  const CORNER_SNAP  = 52;   // snap-on-release radius
+  const SNAP_R       = 26;   // gravity well radius (scaled)
+  const CORNER_SNAP  = 36;   // snap-on-release radius (scaled)
   const DEAD_ZONE_R  = R * 0.18;
 
   // Cardinal cross node positions: top=0, right=1, bottom=2, left=3
@@ -682,12 +682,15 @@ function initOrbital() {
       ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
     }
 
-    // X guide lines (diagonal)
-    ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.5;
-    ctx.beginPath();
-    ctx.moveTo(cx-R,cy-R); ctx.lineTo(cx+R,cy+R);
-    ctx.moveTo(cx+R,cy-R); ctx.lineTo(cx-R,cy+R);
-    ctx.stroke();
+    // 8 guide axes: 4 cardinal + 4 diagonal radiating from centre
+    ctx.strokeStyle='rgba(255,255,255,0.045)'; ctx.lineWidth=0.5;
+    for (let deg = 0; deg < 180; deg += 45) {
+      const rad = deg * Math.PI / 180;
+      ctx.beginPath();
+      ctx.moveTo(cx - Math.cos(rad)*R, cy - Math.sin(rad)*R);
+      ctx.lineTo(cx + Math.cos(rad)*R, cy + Math.sin(rad)*R);
+      ctx.stroke();
+    }
 
     // Dot grid
     ctx.fillStyle='rgba(255,255,255,0.07)';
@@ -708,13 +711,46 @@ function initOrbital() {
     ctx.setLineDash([]);
     ctx.restore();
 
-    // Border glow (weighted colour mix)
+    // Rainbow gradient ring — each quadrant blends between adjacent node colours
+    // Node angles: top=-π/2, right=0, bottom=π/2, left=π
     {
-      let r=0,g=0,b=0;
-      nodes.forEach((nd,i) => { const c=hexRgb(nd.color); r+=c.r*smoothWeights[i]; g+=c.g*smoothWeights[i]; b+=c.b*smoothWeights[i]; });
-      ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2);
-      ctx.strokeStyle=`rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},0.35)`;
-      ctx.lineWidth=3; ctx.stroke();
+      const nodeAngles = [-Math.PI/2, 0, Math.PI/2, Math.PI];
+      const segs = 120;
+      ctx.lineWidth = 2.5;
+      for (let s = 0; s < segs; s++) {
+        const a1 = (s / segs) * Math.PI * 2 - Math.PI / 2;
+        const a2 = ((s + 1) / segs) * Math.PI * 2 - Math.PI / 2;
+        const aMid = (a1 + a2) / 2;
+        // Find the two nearest nodes by angular distance and lerp colour
+        let best1 = 0, best2 = 1, minD = Infinity;
+        for (let i = 0; i < 4; i++) {
+          let d = aMid - nodeAngles[i];
+          while (d > Math.PI) d -= Math.PI * 2;
+          while (d < -Math.PI) d += Math.PI * 2;
+          if (Math.abs(d) < minD) { minD = Math.abs(d); best1 = i; }
+        }
+        let min2 = Infinity;
+        for (let i = 0; i < 4; i++) {
+          if (i === best1) continue;
+          let d = aMid - nodeAngles[i];
+          while (d > Math.PI) d -= Math.PI * 2;
+          while (d < -Math.PI) d += Math.PI * 2;
+          if (Math.abs(d) < min2) { min2 = Math.abs(d); best2 = i; }
+        }
+        let d1 = aMid - nodeAngles[best1];
+        while (d1 > Math.PI) d1 -= Math.PI*2; while (d1 < -Math.PI) d1 += Math.PI*2;
+        let d2 = aMid - nodeAngles[best2];
+        while (d2 > Math.PI) d2 -= Math.PI*2; while (d2 < -Math.PI) d2 += Math.PI*2;
+        const t = Math.abs(d1) / (Math.abs(d1) + Math.abs(d2));
+        const c1 = hexRgb(nodes[best1].color), c2 = hexRgb(nodes[best2].color);
+        const r = Math.round(c1.r*(1-t) + c2.r*t);
+        const g = Math.round(c1.g*(1-t) + c2.g*t);
+        const b = Math.round(c1.b*(1-t) + c2.b*t);
+        const alpha = 0.45 + smoothWeights[best1] * 0.3;
+        ctx.beginPath(); ctx.arc(cx, cy, R, a1, a2);
+        ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+        ctx.stroke();
+      }
     }
 
     // Gravity well rings
@@ -739,7 +775,7 @@ function initOrbital() {
     nodes.forEach((nd,i) => {
       const f = flare[i] > 1 ? flare[i] : 1;
       if (flare[i] > 1) flare[i] = Math.max(1, flare[i]-0.04);
-      const glowR = (32 + smoothWeights[i]*22) * pulse * f;
+      const glowR = (18 + smoothWeights[i]*14) * pulse * f;
 
       // Layer 1: wide feathered glow
       let gr = ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR);
@@ -778,6 +814,14 @@ function initOrbital() {
       // Centre dot
       ctx.beginPath(); ctx.arc(nd.x,nd.y,3,0,Math.PI*2);
       ctx.fillStyle='#fff'; ctx.fill();
+
+      // Node number label
+      const offsets = [{x:0,y:-22},{x:22,y:0},{x:0,y:22},{x:-22,y:0}];
+      ctx.font = '700 12px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = hexA(nd.color, 0.85);
+      ctx.fillText(String(i+1), nd.x + offsets[i].x, nd.y + offsets[i].y);
     });
 
     // Cursor
