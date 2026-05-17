@@ -42,7 +42,7 @@ html, body {
 #song-library {
   position: absolute;
   left: 370px; top: 85px;
-  width: 375px; height: 269px;
+  width: 375px; height: 480px;
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -79,13 +79,8 @@ html, body {
 .card-title { font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .card-meta { font-size: 11px; color: rgba(255,255,255,0.38); }
 
-.song-wave {
-  display: flex; align-items: center; gap: 2px; flex-shrink: 0;
-}
-.wave-bar {
-  width: 3px; border-radius: 1.5px;
-  background: rgba(255,255,255,0.35);
-}
+.song-wave { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.wave-bar { width: 3px; border-radius: 1.5px; background: rgba(255,255,255,0.35); }
 @keyframes w1 { 0%,100% { height:5px } 50% { height:14px } }
 @keyframes w2 { 0%,100% { height:11px } 50% { height:4px } }
 @keyframes w3 { 0%,100% { height:8px } 33% { height:14px } 66% { height:3px } }
@@ -96,15 +91,58 @@ html, body {
 /* ── Orbital Wrap ── */
 #orbital-wrap {
   position: absolute;
-  left: 743px; top: 37px;
-  width: 640px; height: 640px;
-  overflow: visible;
+  left: 840px; top: 80px;
+  width: 500px; height: 500px;
+  overflow: hidden;
   z-index: 10;
 }
 #orbital-pad {
-  width: 640px; height: 640px;
+  width: 500px; height: 500px;
   display: block;
   cursor: none;
+}
+
+/* ── Blend Status (centered below sphere) ── */
+#blend-status {
+  position: absolute;
+  left: 840px;
+  top: 590px;
+  width: 500px;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+#blend-zone {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+#blend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#blend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+#blend-name { font-size: 13px; font-weight: 600; color: #fff; }
+#blend-meta { font-size: 11px; color: rgba(255,255,255,0.38); }
+#blend-badge {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 0.5px solid rgba(255,200,0,0.3);
+  color: rgba(255,200,0,0.7);
+  transition: border-color 0.3s, color 0.3s;
+}
+#blend-bpm-row {
+  font-size: 10px;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: 0.08em;
 }
 
 /* ── Track Slots ── */
@@ -130,57 +168,16 @@ html, body {
   overflow: hidden;
   flex-shrink: 0;
 }
-.track-slot.dragover-active {
-  outline: 1.5px solid rgba(255,255,255,0.35);
-}
+.track-slot.dragover-active { outline: 1.5px solid rgba(255,255,255,0.35); }
 
 .slot-header { display: flex; align-items: center; gap: 7px; }
-.slot-num {
-  font-size: 10px; font-weight: 700;
-  color: rgba(255,255,255,0.35);
-  letter-spacing: 0.5px;
-  flex-shrink: 0;
-}
-.slot-art {
-  width: 40px; height: 40px;
-  border-radius: 4px;
-  object-fit: cover;
-  flex-shrink: 0;
-  background: rgba(255,255,255,0.1);
-}
+.slot-num { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.35); letter-spacing: 0.5px; flex-shrink: 0; }
+.slot-art { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; flex-shrink: 0; background: rgba(255,255,255,0.1); }
 .slot-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .slot-title { font-size: 12px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .slot-meta { font-size: 11px; color: rgba(255,255,255,0.38); }
-
-.slot-pct {
-  position: absolute; top: 8px; right: 8px;
-  font-size: 9px; color: rgba(255,255,255,0.28);
-}
-.slot-bar {
-  position: absolute; bottom: 0; left: 0;
-  height: 2px; width: 0%;
-  border-radius: 1px;
-  transition: none;
-}
-
-/* ── HUD ── */
-#hud {
-  position: absolute;
-  left: 0; right: 0; top: 720px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  z-index: 10;
-  pointer-events: none;
-}
-.hud-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.hud-track { font-size: 13px; font-weight: 600; color: #fff; transition: opacity 0.3s; }
-.hud-meta { font-size: 11px; color: rgba(255,255,255,0.38); transition: opacity 0.3s; }
-.hud-status { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
-.hud-status.blending { color: rgba(255,200,0,0.55); }
-.hud-status.locked { color: rgba(255,255,255,0.4); }
-.hud-status.paused { color: rgba(255,255,255,0.5); }
+.slot-pct { position: absolute; top: 8px; right: 8px; font-size: 9px; color: rgba(255,255,255,0.28); }
+.slot-bar { position: absolute; bottom: 0; left: 0; height: 2px; width: 0%; border-radius: 1px; transition: none; }
 </style>
 </head>
 <body>
@@ -188,28 +185,36 @@ html, body {
   <div id="chrome"></div>
   <div id="song-library"></div>
   <div id="orbital-wrap">
-    <canvas id="orbital-pad" width="640" height="640"></canvas>
-  </div>
-  <div id="track-slots"></div>
-  <div id="hud">
-    <div class="hud-dot" id="hud-dot" style="background:#F2B600"></div>
-    <div class="hud-track" id="hud-track">Solar Wind</div>
-    <div class="hud-meta" id="hud-meta">Orbital A · 126 BPM</div>
-    <div class="hud-status blending" id="hud-status">BLENDING</div>
-  </div>
-  <!-- Click-to-start overlay -->
-  <div id="audio-overlay" style="
-    position:absolute;inset:0;z-index:100;
-    display:flex;align-items:center;justify-content:center;
-    background:rgba(0,0,0,0.55);cursor:pointer;
-  ">
-    <div style="text-align:center;">
-      <div style="font-size:52px;margin-bottom:12px;">▶</div>
-      <div style="font-size:16px;font-weight:600;color:#fff;letter-spacing:0.05em;">CLICK TO START</div>
-      <div id="audio-status" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px;">Loading audio…</div>
+    <canvas id="orbital-pad" width="500" height="500"></canvas>
+    <!-- Overlay inside orbital-wrap so library/slots remain interactive -->
+    <div id="audio-overlay" style="
+      position:absolute;inset:0;z-index:20;
+      display:flex;align-items:center;justify-content:center;
+      background:rgba(0,0,0,0.55);cursor:pointer;border-radius:50%;
+    ">
+      <div style="text-align:center;">
+        <div style="font-size:44px;margin-bottom:10px;">▶</div>
+        <div style="font-size:14px;font-weight:600;color:#fff;letter-spacing:0.05em;">CLICK TO START</div>
+        <div id="audio-status" style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:8px;">Loading audio…</div>
+      </div>
     </div>
   </div>
-  <!-- Embedded audio — browser resolves mp3 or mpeg whichever exists -->
+
+  <!-- Blend status centered below sphere -->
+  <div id="blend-status">
+    <div id="blend-zone">4-Track Blend</div>
+    <div id="blend-row">
+      <div id="blend-dot" style="background:#F2B600"></div>
+      <div id="blend-name">Solar Wind</div>
+      <div id="blend-meta">Orbital A · 126 BPM</div>
+      <div id="blend-badge">BLENDING</div>
+    </div>
+    <div id="blend-bpm-row">MASTER 126 BPM</div>
+  </div>
+
+  <div id="track-slots"></div>
+
+  <!-- Embedded audio elements — browser picks mp3 or mpeg whichever exists -->
   <audio id="aud-a" loop preload="auto"><source src="assets/track-a.mp3"><source src="assets/track-a.mpeg"></audio>
   <audio id="aud-b" loop preload="auto"><source src="assets/track-b.mp3"><source src="assets/track-b.mpeg"></audio>
   <audio id="aud-c" loop preload="auto"><source src="assets/track-c.mp3"><source src="assets/track-c.mpeg"></audio>
@@ -217,8 +222,13 @@ html, body {
   <audio id="aud-e" loop preload="auto"><source src="assets/track-e.mp3"><source src="assets/track-e.mpeg"></audio>
   <audio id="aud-f" loop preload="auto"><source src="assets/track-f.mp3"><source src="assets/track-f.mpeg"></audio>
 </div>
+
 <script>
-// ─── Song data ────────────────────────────────────────────────────────────────
+// (No AudioWorklet — createMediaElementSource fails from file://)
+// Audio uses HTMLAudioElement.volume directly (confirmed to work from file://)
+// Tempo sync uses el.playbackRate (small BPM differences = barely audible pitch shift)
+
+// ─── Song data ───────────────────────────────────────────────────────────────
 const SONGS = [
   { id:'a', title:'Solar Wind', artist:'Orbital A', bpm:126, key:'4A', color:'#F2B600', art:'assets/art-a.jpeg', file:'assets/track-a.mp3' },
   { id:'b', title:'Deep Pulse', artist:'Orbital B', bpm:128, key:'5A', color:'#00CCCA', art:'assets/art-b.jpeg', file:'assets/track-b.mp3' },
@@ -229,58 +239,41 @@ const SONGS = [
 ];
 const SONG_MAP = Object.fromEntries(SONGS.map(s => [s.id, s]));
 
-// Active slots (4 always occupied)
 let slots = [SONGS[0], SONGS[1], SONGS[2], SONGS[3]];
-
-// Shared weights — written by orbital canvas, read by audio + HUD
 const smoothWeights = new Float32Array([0.25, 0.25, 0.25, 0.25]);
-
 let paused = false;
-let currentDragSong = null; // set on dragstart so dragover can read it
+let currentDragSong = null;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function hexRgb(hex) {
-  return {
-    r: parseInt(hex.slice(1,3),16),
-    g: parseInt(hex.slice(3,5),16),
-    b: parseInt(hex.slice(5,7),16),
-  };
+  return { r:parseInt(hex.slice(1,3),16), g:parseInt(hex.slice(3,5),16), b:parseInt(hex.slice(5,7),16) };
 }
-function hexA(hex, a) {
-  const {r,g,b} = hexRgb(hex);
-  return `rgba(${r},${g},${b},${a})`;
-}
-function clamp(v,lo,hi){ return v < lo ? lo : v > hi ? hi : v; }
-function dist(ax,ay,bx,by){ const dx=ax-bx,dy=ay-by; return Math.sqrt(dx*dx+dy*dy); }
-function smoothstep(t){ t=clamp(t,0,1); return t*t*(3-2*t); }
-function easeOutCubic(t){ return 1-Math.pow(1-t,3); }
+function hexA(hex,a) { const {r,g,b}=hexRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+function clamp(v,lo,hi) { return v<lo?lo:v>hi?hi:v; }
+function dist(ax,ay,bx,by) { const dx=ax-bx,dy=ay-by; return Math.sqrt(dx*dx+dy*dy); }
+function smoothstep(t) { t=clamp(t,0,1); return t*t*(3-2*t); }
+function easeOutCubic(t) { return 1-Math.pow(1-t,3); }
 
-// ─── Audio Engine ─────────────────────────────────────────────────────────────
-// ─── Audio Engine ─────────────────────────────────────────────────────────────
+// ─── Audio Engine (el.volume — works reliably from file://) ──────────────────
 const AudioEngine = (() => {
   let started = false;
-  const els = {};                       // songId → HTMLAudioElement
-  const slotSong = ['a','b','c','d'];   // which song is in each slot
+  const els      = {};               // songId → HTMLAudioElement
+  const slotSong = ['a','b','c','d'];
 
   function preload() {
-    // Grab the embedded <audio> elements by id
     const idMap = { a:'aud-a', b:'aud-b', c:'aud-c', d:'aud-d', e:'aud-e', f:'aud-f' };
     const statusEl = document.getElementById('audio-status');
     let loaded = 0;
-
     SONGS.forEach(s => {
       const el = document.getElementById(idMap[s.id]);
       el.volume = 0;
       els[s.id] = el;
-
       el.addEventListener('canplay', () => {
         loaded++;
         if (statusEl) statusEl.textContent = `${loaded}/6 tracks ready`;
       }, { once: true });
-
       el.addEventListener('error', () => {
-        if (statusEl) statusEl.textContent = `⚠ Can't load track-${s.id} — check assets/`;
-        console.error('Audio load error:', s.id, el.error);
+        console.error('Audio error:', s.id, el.error);
       });
     });
   }
@@ -290,33 +283,43 @@ const AudioEngine = (() => {
     started = true;
     const overlay = document.getElementById('audio-overlay');
     if (overlay) overlay.style.display = 'none';
-
     let ok = 0;
     SONGS.forEach(s => {
       els[s.id].play()
-        .then(() => { ok++; console.log(`▶ ${s.id} playing (${ok}/6)`); })
-        .catch(err => console.error(`✗ ${s.id}:`, err.name, err.message));
+        .then(() => { ok++; console.log(`▶ ${s.id} (${ok}/6)`); })
+        .catch(e  => console.error(`✗ ${s.id}:`, e.message));
     });
   }
 
-  // Called every frame — smoothWeights[slotIndex] drives each song's volume
+  // Called every animation frame — smoothWeights[slotIndex] drives each song's volume.
+  // Also applies tempo sync via playbackRate (master = slot 0).
   function setGains(sw) {
     if (!started) return;
+    const masterBpm = SONG_MAP[slotSong[0]]?.bpm || 126;
+
     SONGS.forEach(s => {
-      const si = slotSong.indexOf(s.id);
+      const si     = slotSong.indexOf(s.id);
       const target = si >= 0 ? clamp(sw[si] * 0.85, 0, 1) : 0;
+
+      // Smooth volume
       els[s.id].volume += (target - els[s.id].volume) * 0.12;
+
+      // Tempo sync: adjust playback rate to match master BPM.
+      // Pitch will shift slightly (≤ ~3%) — acceptable for a live demo.
+      const rate = masterBpm / (s.bpm || 126);
+      els[s.id].playbackRate = Math.max(0.5, Math.min(2.0, rate));
     });
   }
 
-  function swap(slotIdx, song) {
-    slotSong[slotIdx] = song.id;
-  }
+  function swap(slotIdx, song) { slotSong[slotIdx] = song.id; }
+
+  function getMasterBpm()         { return SONG_MAP[slotSong[0]]?.bpm || 126; }
+  function getDetectedBpm(songId) { return SONG_MAP[songId]?.bpm; }
 
   function stopAll() { SONGS.forEach(s => { try { els[s.id].pause(); } catch(e) {} }); }
   function playAll() { SONGS.forEach(s => { els[s.id].play().catch(()=>{}); }); }
 
-  return { preload, start, setGains, swap, stopAll, playAll };
+  return { preload, start, setGains, swap, getMasterBpm, getDetectedBpm, stopAll, playAll };
 })();
 
 // ─── DOM Rendering ────────────────────────────────────────────────────────────
@@ -329,10 +332,9 @@ function renderLibrary() {
     card.className = 'song-card' + (inSlot ? ' active' : '');
     card.style.borderLeftColor = song.color;
     card.draggable = true;
-    card.dataset.id = song.id;
-
+    card.dataset.songId = song.id;
     card.innerHTML = `
-      <img src="${song.art}" alt="" onerror="this.style.opacity='0.3'">
+      <img draggable="false" src="${song.art}" alt="" onerror="this.style.opacity='0.3'">
       <div class="card-info">
         <div class="card-title">${song.title}</div>
         <div class="card-meta">${song.artist} · ${song.bpm} BPM · ${song.key}</div>
@@ -343,23 +345,14 @@ function renderLibrary() {
         <div class="wave-bar" style="background:${song.color}bb"></div>
       </div>` : ''}
     `;
-
+    // dragstart: NO DOM mutations — only set data. DOM changes during dragstart
+    // cancel the drag in Chrome.
     card.addEventListener('dragstart', e => {
-      AudioEngine.start();
       currentDragSong = song;
-      e.dataTransfer.setData('application/json', JSON.stringify(song));
+      e.dataTransfer.setData('text/plain', song.id);
       e.dataTransfer.effectAllowed = 'move';
-      requestAnimationFrame(() => {
-        card.style.opacity = '0.92';
-        card.style.boxShadow = '0 0 0 1.5px rgba(255,255,255,0.5)';
-      });
     });
-    card.addEventListener('dragend', () => {
-      currentDragSong = null;
-      card.style.opacity = '';
-      card.style.boxShadow = '';
-    });
-
+    card.addEventListener('dragend', () => { currentDragSong = null; });
     lib.appendChild(card);
   });
 }
@@ -372,155 +365,197 @@ function renderSlots() {
     slot.className = 'track-slot';
     slot.style.borderLeftColor = song.color;
     slot.dataset.slot = i;
-
     slot.innerHTML = `
       <div class="slot-pct" id="slot-pct-${i}">25%</div>
       <div class="slot-header">
         <div class="slot-num">${i+1}</div>
-        <img class="slot-art" src="${song.art}" alt="" onerror="this.style.opacity='0.3'">
+        <img draggable="false" class="slot-art" src="${song.art}" alt="" onerror="this.style.opacity='0.3'">
         <div class="slot-info">
           <div class="slot-title">${song.title}</div>
-          <div class="slot-meta">${song.bpm} BPM · ${song.key}</div>
+          <div class="slot-meta" id="slot-bpm-${i}">${song.bpm} BPM · ${song.key}</div>
         </div>
       </div>
       <div class="slot-bar" id="slot-bar-${i}" style="background:${song.color}"></div>
     `;
-
-    slot.addEventListener('dragover', e => {
+    // Highlight on dragenter/dragleave — visual only, no drop logic here.
+    slot.addEventListener('dragenter', e => {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
       slot.classList.add('dragover-active');
-      if (currentDragSong) {
-        slot.style.boxShadow = `inset 0 0 0 1.5px ${currentDragSong.color}, 0 0 18px ${currentDragSong.color}44`;
+      if (currentDragSong) slot.style.boxShadow = `inset 0 0 0 1.5px ${currentDragSong.color}, 0 0 18px ${currentDragSong.color}44`;
+    });
+    slot.addEventListener('dragleave', e => {
+      if (!slot.contains(e.relatedTarget)) {
+        slot.classList.remove('dragover-active');
+        slot.style.boxShadow = '';
       }
     });
-
-    slot.addEventListener('dragleave', () => {
-      slot.classList.remove('dragover-active');
-      slot.style.boxShadow = '';
-    });
-
-    slot.addEventListener('drop', e => {
-      e.preventDefault();
-      slot.classList.remove('dragover-active');
-      slot.style.boxShadow = '';
-      try {
-        const incoming = JSON.parse(e.dataTransfer.getData('application/json'));
-        const outgoing = slots[i];
-        if (incoming.id === outgoing.id) return;
-
-        slots[i] = incoming;
-
-        if (window.orbital) orbital.setNodeColor(i, incoming.color);
-        AudioEngine.swap(i, incoming);
-
-        renderLibrary();
-        renderSlots();
-      } catch(err) { console.error(err); }
-    });
-
+    slot.addEventListener('dragover', e => e.preventDefault());
     container.appendChild(slot);
   });
 }
 
+// ─── Document-level drop handler (most reliable approach) ─────────────────────
+// Catches all drops regardless of which child element the cursor lands on.
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const songId = e.dataTransfer.getData('text/plain');
+  if (!songId) return;
+  const incoming = SONG_MAP[songId];
+  if (!incoming) return;
+
+  // Walk up from drop target to find the slot element
+  let el = e.target;
+  while (el && el !== document.body) {
+    if (el.dataset && el.dataset.slot !== undefined) break;
+    el = el.parentElement;
+  }
+
+  // Clear all slot highlights
+  document.querySelectorAll('.track-slot').forEach(s => {
+    s.classList.remove('dragover-active');
+    s.style.boxShadow = '';
+  });
+
+  if (!el || el.dataset.slot === undefined) return;
+  const i = parseInt(el.dataset.slot);
+  if (incoming.id === slots[i].id) return;
+
+  slots[i] = incoming;
+  if (window.orbital) orbital.setNodeColor(i, incoming.color);
+  AudioEngine.swap(i, incoming);
+  AudioEngine.start(); // safe here — drop is a user gesture, DOM change won't cancel anything
+  renderLibrary();
+  renderSlots();
+});
+
 function updateSlotBars() {
   for (let i = 0; i < 4; i++) {
-    const bar = document.getElementById('slot-bar-'+i);
-    const pct = document.getElementById('slot-pct-'+i);
-    if (bar) bar.style.width = (smoothWeights[i]*100)+'%';
-    if (pct) pct.textContent = Math.round(smoothWeights[i]*100)+'%';
+    const bar = document.getElementById('slot-bar-' + i);
+    const pct = document.getElementById('slot-pct-' + i);
+    const bpmEl = document.getElementById('slot-bpm-' + i);
+    if (bar) bar.style.width = (smoothWeights[i] * 100) + '%';
+    if (pct) pct.textContent = Math.round(smoothWeights[i] * 100) + '%';
+    // Update detected BPM in slot
+    if (bpmEl) {
+      const det = AudioEngine.getDetectedBpm(slots[i].id);
+      const master = AudioEngine.getMasterBpm();
+      if (det && i > 0 && Math.abs(det - master) > 1) {
+        bpmEl.textContent = `${det} BPM → ${master} BPM`;
+      } else {
+        bpmEl.textContent = `${det || slots[i].bpm} BPM · ${slots[i].key}`;
+      }
+    }
   }
 }
 
-let lastDomIdx = -1;
-function updateHUD() {
+// ── Blend status (centered below sphere) ─────────────────────────────────────
+let lastBlendDomIdx = -1;
+let blendZoneState  = 0; // 0=4-track, 0.5=transition, 1=2-track
+
+function updateBlendStatus(zoneBlend) {
+  // Dominant slot
   let maxW = 0, domIdx = 0;
   for (let i = 0; i < 4; i++) { if (smoothWeights[i] > maxW) { maxW = smoothWeights[i]; domIdx = i; } }
   const song = slots[domIdx];
   if (!song) return;
 
-  const dot    = document.getElementById('hud-dot');
-  const track  = document.getElementById('hud-track');
-  const meta   = document.getElementById('hud-meta');
-  const status = document.getElementById('hud-status');
+  const dot    = document.getElementById('blend-dot');
+  const name   = document.getElementById('blend-name');
+  const meta   = document.getElementById('blend-meta');
+  const badge  = document.getElementById('blend-badge');
+  const zone   = document.getElementById('blend-zone');
+  const bpmRow = document.getElementById('blend-bpm-row');
 
-  if (domIdx !== lastDomIdx) {
-    track.style.opacity = '0'; meta.style.opacity = '0';
+  // Song name / meta (fade on change)
+  if (domIdx !== lastBlendDomIdx) {
+    name.style.opacity = '0'; meta.style.opacity = '0';
     setTimeout(() => {
-      track.textContent = song.title;
-      meta.textContent  = `${song.artist} · ${song.bpm} BPM`;
-      track.style.opacity = '1'; meta.style.opacity = '1';
+      name.textContent = song.title;
+      meta.textContent = `${song.artist} · ${AudioEngine.getDetectedBpm(song.id) || song.bpm} BPM`;
+      name.style.opacity = '1'; meta.style.opacity = '1';
     }, 150);
     dot.style.background = song.color;
-    lastDomIdx = domIdx;
+    name.style.transition = 'opacity 0.15s';
+    meta.style.transition = 'opacity 0.15s';
+    lastBlendDomIdx = domIdx;
+  } else {
+    // Update BPM number in real-time
+    meta.textContent = `${song.artist} · ${AudioEngine.getDetectedBpm(song.id) || song.bpm} BPM`;
   }
 
+  // Zone label
+  if (zoneBlend < 0.15) zone.textContent = '4-TRACK BLEND';
+  else if (zoneBlend > 0.85) zone.textContent = '2-TRACK MIX';
+  else zone.textContent = 'TRANSITION ZONE';
+
+  // Master BPM row
+  const master = AudioEngine.getMasterBpm();
+  const masterSong = slots[0];
+  bpmRow.textContent = masterSong ? `MASTER ${master} BPM  ·  ${masterSong.title.toUpperCase()}` : `MASTER ${master} BPM`;
+
+  // Status badge
   if (paused) {
-    status.textContent = 'PAUSED'; status.className = 'hud-status paused'; status.style.color = '';
+    badge.textContent = 'PAUSED';
+    badge.style.color = 'rgba(255,255,255,0.5)';
+    badge.style.borderColor = 'rgba(255,255,255,0.2)';
   } else if (maxW > 0.85) {
-    status.textContent = 'LOCKED'; status.className = 'hud-status locked'; status.style.color = song.color+'99';
+    badge.textContent = 'LOCKED';
+    badge.style.color = hexA(song.color, 0.75);
+    badge.style.borderColor = hexA(song.color, 0.35);
   } else if (maxW < 0.6) {
-    status.textContent = 'BLENDING'; status.className = 'hud-status blending'; status.style.color = '';
+    badge.textContent = 'BLENDING';
+    badge.style.color = 'rgba(255,200,0,0.7)';
+    badge.style.borderColor = 'rgba(255,200,0,0.3)';
   } else {
-    status.textContent = ''; status.className = 'hud-status';
+    badge.textContent = 'MIXING';
+    badge.style.color = 'rgba(180,255,180,0.65)';
+    badge.style.borderColor = 'rgba(180,255,180,0.3)';
   }
 }
 
 // ─── Orbital Canvas ───────────────────────────────────────────────────────────
-let orbital; // set after DOMContentLoaded
+let orbital;
 
 function initOrbital() {
   const canvas = document.getElementById('orbital-pad');
   const ctx    = canvas.getContext('2d');
-  const W = 640, H = 640, cx = 320, cy = 320;
-  const R = 304; // circle radius — leaves 16px padding in 640px canvas
-  const D = 278; // node distance from centre (R - 26)
+  const W = 500, H = 500, cx = 250, cy = 250;
+  const R = 215;  // circle radius — leaves ~35px each side for labels
+  const D = 180;  // node distance from centre (inside circle)
 
-  const THRESHOLD    = 0.5;
-  const SNAP_R       = 26;   // gravity well radius (scaled)
-  const CORNER_SNAP  = 36;   // snap-on-release radius (scaled)
-  const DEAD_ZONE_R  = R * 0.18;
+  const THRESHOLD   = 0.5;
+  const SNAP_R      = 20;
+  const CORNER_SNAP = 28;
+  const DEAD_ZONE_R = R * 0.18;
 
-  // Cardinal cross node positions: top=0, right=1, bottom=2, left=3
   const nodes = [
-    { x: cx,   y: cy-D, color: slots[0].color }, // top    slot 0
-    { x: cx+D, y: cy,   color: slots[1].color }, // right  slot 1
-    { x: cx,   y: cy+D, color: slots[2].color }, // bottom slot 2
-    { x: cx-D, y: cy,   color: slots[3].color }, // left   slot 3
+    { x: cx,   y: cy-D, color: slots[0].color },
+    { x: cx+D, y: cy,   color: slots[1].color },
+    { x: cx,   y: cy+D, color: slots[2].color },
+    { x: cx-D, y: cy,   color: slots[3].color },
   ];
 
-  // Pre-generate grain particles
   const grain = nodes.map(() =>
     Array.from({length:110}, () => ({
       angle: Math.random()*Math.PI*2,
-      dist:  Math.sqrt(Math.random()), // bias toward centre
+      dist:  Math.sqrt(Math.random()),
       size:  0.3 + Math.random()*1.6,
       baseAlpha: 0.3 + Math.random()*0.7,
     }))
   );
 
-  // Gravity well expanding rings
   const rings = nodes.map(() => ({ active:false, r:0, alpha:0 }));
-
-  // Node glow flare multiplier (>1 = flash)
   const flare = [1,1,1,1];
 
-  // Physics state
-  let pos    = { x:cx, y:cy };
-  let tgt    = { x:cx, y:cy };
+  let pos = { x:cx, y:cy };
+  let tgt = { x:cx, y:cy };
   let vx = 0, vy = 0;
   let dragging = false;
-
-  // Corner snap animation
   let snapping = false, snapFrom = null, snapTo = null, snapT = 0, snapNodeIdx = -1;
-
-  // Dead zone transition (0=normal, 1=full dead zone)
   let dzLerp = 0;
+  let currentZoneBlend = 0;
 
-  // Target weights (raw, before smoothing)
-  const rawW = new Float32Array(4);
-
-  // ── Weight computation ─────────────────────────────────────────────────────
   function computeRaw(px, py) {
     const dx = px-cx, dy = py-cy;
     const nd = Math.sqrt(dx*dx+dy*dy) / R;
@@ -534,37 +569,21 @@ function initOrbital() {
     }
     for (let i = 0; i < 4; i++) wI[i] /= sumI;
 
-    if (nd <= THRESHOLD) return wI;
+    if (nd <= THRESHOLD) return { w: wI, zoneBlend: 0 };
 
     const angle = Math.atan2(dy,dx) * 180/Math.PI;
     const wO = new Float32Array(4);
-
-    // Nodes are cardinal (top/right/bottom/left); sectors bounded by diagonal axes
-    if (angle >= -90 && angle < 0) {
-      // NE quadrant: TOP(0) ↔ RIGHT(1)
-      const t = (angle+90)/90;
-      wO[0] = 1-t; wO[1] = t;
-    } else if (angle >= 0 && angle < 90) {
-      // SE quadrant: RIGHT(1) ↔ BOTTOM(2)
-      const t = angle/90;
-      wO[1] = 1-t; wO[2] = t;
-    } else if (angle >= 90 && angle < 180) {
-      // SW quadrant: BOTTOM(2) ↔ LEFT(3)
-      const t = (angle-90)/90;
-      wO[2] = 1-t; wO[3] = t;
-    } else {
-      // NW quadrant: LEFT(3) ↔ TOP(0)  (angle -180 to -90)
-      const t = (angle+180)/90;
-      wO[3] = 1-t; wO[0] = t;
-    }
+    if (angle >= -90 && angle < 0)       { const t=(angle+90)/90; wO[0]=1-t; wO[1]=t; }
+    else if (angle >= 0 && angle < 90)   { const t=angle/90;      wO[1]=1-t; wO[2]=t; }
+    else if (angle >= 90 && angle < 180) { const t=(angle-90)/90; wO[2]=1-t; wO[3]=t; }
+    else                                  { const t=(angle+180)/90; wO[3]=1-t; wO[0]=t; }
 
     const blendT = smoothstep((nd-THRESHOLD)/(1-THRESHOLD));
     const result = new Float32Array(4);
     for (let i = 0; i < 4; i++) result[i] = wI[i]*(1-blendT) + wO[i]*blendT;
-    return result;
+    return { w: result, zoneBlend: blendT };
   }
 
-  // ── Physics ────────────────────────────────────────────────────────────────
   function updatePhysics() {
     if (snapping) {
       snapT = Math.min(snapT + 1/(0.280*60), 1);
@@ -574,114 +593,95 @@ function initOrbital() {
       vx = vy = 0;
       if (snapT >= 1) {
         snapping = false;
-        // Lock weights
         for (let i = 0; i < 4; i++) smoothWeights[i] = i===snapNodeIdx ? 1 : 0;
         flare[snapNodeIdx] = 1.5;
       }
       return;
     }
 
-    // Gravity wells
     for (let i = 0; i < 4; i++) {
       const d = dist(pos.x,pos.y,nodes[i].x,nodes[i].y);
       if (d < SNAP_R) {
-        const falloff = 1 - d/SNAP_R;
-        vx += (nodes[i].x - pos.x)*0.045*falloff;
-        vy += (nodes[i].y - pos.y)*0.045*falloff;
-        // Slow incoming movement (applied via reduced spring response — already handled)
+        const f = 1 - d/SNAP_R;
+        vx += (nodes[i].x - pos.x)*0.045*f;
+        vy += (nodes[i].y - pos.y)*0.045*f;
         if (!rings[i].active) rings[i] = { active:true, r:0, alpha:0.12 };
       }
     }
 
-    // Spring
     vx = (vx + (tgt.x - pos.x)*0.09) * 0.80;
     vy = (vy + (tgt.y - pos.y)*0.09) * 0.80;
+    pos.x += vx; pos.y += vy;
 
-    pos.x += vx;
-    pos.y += vy;
-
-    // Edge resistance: near boundary, dampen outward velocity
-    {
+    { // Edge resistance
       const dx2=pos.x-cx, dy2=pos.y-cy;
-      const d2 = Math.sqrt(dx2*dx2+dy2*dy2);
+      const d2=Math.sqrt(dx2*dx2+dy2*dy2);
       if (d2 > R-28 && d2 > 0) {
         const nx=dx2/d2, ny=dy2/d2;
-        const outward = vx*nx + vy*ny;
-        if (outward > 0) { vx -= outward*nx*0.7; vy -= outward*ny*0.7; }
+        const out=vx*nx+vy*ny;
+        if (out>0) { vx-=out*nx*0.7; vy-=out*ny*0.7; }
       }
     }
-
-    // Hard boundary bounce
-    {
+    { // Hard boundary
       const dx=pos.x-cx, dy=pos.y-cy;
-      const d = Math.sqrt(dx*dx+dy*dy);
+      const d=Math.sqrt(dx*dx+dy*dy);
       if (d > R-14) {
         const nx=dx/d, ny=dy/d;
-        pos.x = cx + nx*(R-14);
-        pos.y = cy + ny*(R-14);
-        const outward = vx*nx + vy*ny;
-        if (outward > 0) { vx -= outward*nx*(1+0.28); vy -= outward*ny*(1+0.28); }
+        pos.x=cx+nx*(R-14); pos.y=cy+ny*(R-14);
+        const out=vx*nx+vy*ny;
+        if (out>0) { vx-=out*nx*1.28; vy-=out*ny*1.28; }
       }
     }
   }
 
-  // ── Weights ────────────────────────────────────────────────────────────────
   function updateWeights() {
-    const raw = computeRaw(pos.x, pos.y);
+    const { w: raw, zoneBlend } = computeRaw(pos.x, pos.y);
+    currentZoneBlend = zoneBlend;
 
     const dzDist = dist(pos.x,pos.y,cx,cy);
     const inDead = dzDist < DEAD_ZONE_R;
     dzLerp = inDead ? Math.min(dzLerp + 1/12, 1) : 0;
 
-    const speed = Math.sqrt(vx*vx + vy*vy);
+    const speed = Math.sqrt(vx*vx+vy*vy);
     const wLerp = 0.14 - clamp(speed/10, 0, 1)*0.10;
 
     for (let i = 0; i < 4; i++) {
-      const tgt = raw[i]*(1-dzLerp) + 0.25*dzLerp;
-      smoothWeights[i] += (tgt - smoothWeights[i]) * wLerp;
+      const t = raw[i]*(1-dzLerp) + 0.25*dzLerp;
+      smoothWeights[i] += (t - smoothWeights[i]) * wLerp;
     }
-
-    // Normalise
     let sum = 0;
     for (let i = 0; i < 4; i++) sum += smoothWeights[i];
     if (sum > 0) for (let i = 0; i < 4; i++) smoothWeights[i] /= sum;
   }
 
-  // ── Rendering ──────────────────────────────────────────────────────────────
   function render(ts) {
     ctx.clearRect(0, 0, W, H);
     const pulse = Math.sin(ts*0.0008)*0.12 + 0.88;
 
-    // ── Pad background (clipped to circle) ──
     ctx.save();
     ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.clip();
-
-    ctx.fillStyle = '#191919'; ctx.fill();
+    ctx.fillStyle='#191919'; ctx.fill();
 
     ctx.beginPath(); ctx.arc(cx,cy,R*THRESHOLD,0,Math.PI*2);
-    ctx.fillStyle = '#131313'; ctx.fill();
+    ctx.fillStyle='#131313'; ctx.fill();
 
-    // Dead zone hint
     ctx.beginPath(); ctx.arc(cx,cy,DEAD_ZONE_R,0,Math.PI*2);
-    ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.04)'; ctx.fill();
 
-    // Concentric rings
     ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=0.5;
     for (let r=55; r<R; r+=55) {
       ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
     }
 
-    // 8 guide axes: 4 cardinal + 4 diagonal radiating from centre
     ctx.strokeStyle='rgba(255,255,255,0.045)'; ctx.lineWidth=0.5;
-    for (let deg = 0; deg < 180; deg += 45) {
-      const rad = deg * Math.PI / 180;
+    for (let deg=0; deg<180; deg+=45) {
+      const rad=deg*Math.PI/180;
       ctx.beginPath();
-      ctx.moveTo(cx - Math.cos(rad)*R, cy - Math.sin(rad)*R);
-      ctx.lineTo(cx + Math.cos(rad)*R, cy + Math.sin(rad)*R);
+      ctx.moveTo(cx-Math.cos(rad)*R, cy-Math.sin(rad)*R);
+      ctx.lineTo(cx+Math.cos(rad)*R, cy+Math.sin(rad)*R);
       ctx.stroke();
     }
 
-    // Dot grid
     ctx.fillStyle='rgba(255,255,255,0.07)';
     for (let gx=0; gx<=W; gx+=20) {
       for (let gy=0; gy<=H; gy+=20) {
@@ -692,7 +692,6 @@ function initOrbital() {
     }
     ctx.restore();
 
-    // Inner zone dashed ring
     ctx.save();
     ctx.setLineDash([4,4]);
     ctx.beginPath(); ctx.arc(cx,cy,R*THRESHOLD,0,Math.PI*2);
@@ -700,198 +699,188 @@ function initOrbital() {
     ctx.setLineDash([]);
     ctx.restore();
 
-    // Rainbow gradient ring — each quadrant blends between adjacent node colours
-    // Node angles: top=-π/2, right=0, bottom=π/2, left=π
+    // Rainbow gradient ring — blurred backing + sharp front
     {
-      const nodeAngles = [-Math.PI/2, 0, Math.PI/2, Math.PI];
-      const segs = 120;
-      ctx.lineWidth = 2.5;
-      for (let s = 0; s < segs; s++) {
-        const a1 = (s / segs) * Math.PI * 2 - Math.PI / 2;
-        const a2 = ((s + 1) / segs) * Math.PI * 2 - Math.PI / 2;
-        const aMid = (a1 + a2) / 2;
-        // Find the two nearest nodes by angular distance and lerp colour
-        let best1 = 0, best2 = 1, minD = Infinity;
-        for (let i = 0; i < 4; i++) {
-          let d = aMid - nodeAngles[i];
-          while (d > Math.PI) d -= Math.PI * 2;
-          while (d < -Math.PI) d += Math.PI * 2;
-          if (Math.abs(d) < minD) { minD = Math.abs(d); best1 = i; }
+      const nodeAngles=[-Math.PI/2, 0, Math.PI/2, Math.PI];
+      const segs=120;
+
+      function drawRing(radius, lw, alphaBoost) {
+        for (let s=0; s<segs; s++) {
+          const a1=(s/segs)*Math.PI*2-Math.PI/2;
+          const a2=((s+1)/segs)*Math.PI*2-Math.PI/2;
+          const aMid=(a1+a2)/2;
+          let best1=0, minD=Infinity;
+          for (let i=0; i<4; i++) {
+            let d=aMid-nodeAngles[i];
+            while(d>Math.PI) d-=Math.PI*2; while(d<-Math.PI) d+=Math.PI*2;
+            if(Math.abs(d)<minD){minD=Math.abs(d);best1=i;}
+          }
+          let best2=0, min2=Infinity;
+          for (let i=0; i<4; i++) {
+            if(i===best1)continue;
+            let d=aMid-nodeAngles[i];
+            while(d>Math.PI) d-=Math.PI*2; while(d<-Math.PI) d+=Math.PI*2;
+            if(Math.abs(d)<min2){min2=Math.abs(d);best2=i;}
+          }
+          let d1=aMid-nodeAngles[best1]; while(d1>Math.PI)d1-=Math.PI*2;while(d1<-Math.PI)d1+=Math.PI*2;
+          let d2=aMid-nodeAngles[best2]; while(d2>Math.PI)d2-=Math.PI*2;while(d2<-Math.PI)d2+=Math.PI*2;
+          const t=Math.abs(d1)/(Math.abs(d1)+Math.abs(d2));
+          const c1=hexRgb(nodes[best1].color),c2=hexRgb(nodes[best2].color);
+          const r=Math.round(c1.r*(1-t)+c2.r*t);
+          const g=Math.round(c1.g*(1-t)+c2.g*t);
+          const b=Math.round(c1.b*(1-t)+c2.b*t);
+          const alpha=clamp((0.5+smoothWeights[best1]*0.35)*alphaBoost,0,1);
+          ctx.beginPath(); ctx.arc(cx,cy,radius,a1,a2);
+          ctx.strokeStyle=`rgba(${r},${g},${b},${alpha})`;
+          ctx.lineWidth=lw; ctx.stroke();
         }
-        let min2 = Infinity;
-        for (let i = 0; i < 4; i++) {
-          if (i === best1) continue;
-          let d = aMid - nodeAngles[i];
-          while (d > Math.PI) d -= Math.PI * 2;
-          while (d < -Math.PI) d += Math.PI * 2;
-          if (Math.abs(d) < min2) { min2 = Math.abs(d); best2 = i; }
-        }
-        let d1 = aMid - nodeAngles[best1];
-        while (d1 > Math.PI) d1 -= Math.PI*2; while (d1 < -Math.PI) d1 += Math.PI*2;
-        let d2 = aMid - nodeAngles[best2];
-        while (d2 > Math.PI) d2 -= Math.PI*2; while (d2 < -Math.PI) d2 += Math.PI*2;
-        const t = Math.abs(d1) / (Math.abs(d1) + Math.abs(d2));
-        const c1 = hexRgb(nodes[best1].color), c2 = hexRgb(nodes[best2].color);
-        const r = Math.round(c1.r*(1-t) + c2.r*t);
-        const g = Math.round(c1.g*(1-t) + c2.g*t);
-        const b = Math.round(c1.b*(1-t) + c2.b*t);
-        const alpha = 0.45 + smoothWeights[best1] * 0.3;
-        ctx.beginPath(); ctx.arc(cx, cy, R, a1, a2);
-        ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
-        ctx.stroke();
       }
+
+      // Blurred soft glow ring behind
+      ctx.save();
+      ctx.filter='blur(5px)';
+      drawRing(R, 8, 0.7);
+      ctx.filter='none';
+      ctx.restore();
+      // Sharp ring on top
+      drawRing(R, 3.5, 1.0);
     }
 
-    // Gravity well rings
     rings.forEach((ring,i) => {
       if (!ring.active) return;
-      ring.r += 2; ring.alpha -= 0.003;
-      if (ring.r >= SNAP_R || ring.alpha <= 0) { ring.active=false; return; }
+      ring.r+=2; ring.alpha-=0.003;
+      if (ring.r>=SNAP_R||ring.alpha<=0) { ring.active=false; return; }
       ctx.beginPath(); ctx.arc(nodes[i].x,nodes[i].y,ring.r,0,Math.PI*2);
-      ctx.strokeStyle = hexA(nodes[i].color, ring.alpha);
-      ctx.lineWidth=1; ctx.stroke();
+      ctx.strokeStyle=hexA(nodes[i].color,ring.alpha); ctx.lineWidth=1; ctx.stroke();
     });
 
-    // Connection lines (cursor → each node)
+    // Connection lines
     nodes.forEach((nd,i) => {
       ctx.beginPath(); ctx.moveTo(pos.x,pos.y); ctx.lineTo(nd.x,nd.y);
-      ctx.strokeStyle = hexA(nd.color, smoothWeights[i]*0.5);
-      ctx.lineWidth = 0.5 + smoothWeights[i]*2.5;
-      ctx.stroke();
+      ctx.strokeStyle=hexA(nd.color,smoothWeights[i]*0.5);
+      ctx.lineWidth=0.5+smoothWeights[i]*2.5; ctx.stroke();
     });
 
-    // Track nodes
+    // Track nodes — layer blur glow
     nodes.forEach((nd,i) => {
-      const f = flare[i] > 1 ? flare[i] : 1;
-      if (flare[i] > 1) flare[i] = Math.max(1, flare[i]-0.04);
-      const glowR = (18 + smoothWeights[i]*14) * pulse * f;
+      const f=flare[i]>1?flare[i]:1;
+      if (flare[i]>1) flare[i]=Math.max(1,flare[i]-0.04);
+      const glowR=(26+smoothWeights[i]*22)*pulse*f;
 
-      // Layer 1: wide feathered glow
-      let gr = ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR);
-      gr.addColorStop(0.00, hexA(nd.color,0.60));
-      gr.addColorStop(0.30, hexA(nd.color,0.30));
-      gr.addColorStop(0.65, hexA(nd.color,0.08));
-      gr.addColorStop(1.00, hexA(nd.color,0.00));
+      // Layer 1: wide blurred bloom (canvas filter blur)
+      ctx.save();
+      ctx.filter=`blur(${Math.round(glowR*0.35)}px)`;
+      ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR*0.55,0,Math.PI*2);
+      ctx.fillStyle=hexA(nd.color,0.55);
+      ctx.fill();
+      ctx.filter='none';
+      ctx.restore();
+
+      // Layer 2: mid radial gradient
+      let gr=ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR);
+      gr.addColorStop(0.00,hexA(nd.color,0.55));
+      gr.addColorStop(0.35,hexA(nd.color,0.22));
+      gr.addColorStop(0.70,hexA(nd.color,0.06));
+      gr.addColorStop(1.00,hexA(nd.color,0.00));
       ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR,0,Math.PI*2);
       ctx.fillStyle=gr; ctx.fill();
 
-      // Layer 2: inner bright core
-      gr = ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR*0.42);
-      gr.addColorStop(0, hexA(nd.color,0.95));
-      gr.addColorStop(1, hexA(nd.color,0));
-      ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR*0.42,0,Math.PI*2);
+      // Layer 3: inner bright core
+      gr=ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR*0.38);
+      gr.addColorStop(0,hexA(nd.color,0.95)); gr.addColorStop(1,hexA(nd.color,0));
+      ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR*0.38,0,Math.PI*2);
       ctx.fillStyle=gr; ctx.fill();
 
-      // Layer 3: white specular flash
-      const specA = 0.55 + smoothWeights[i]*0.30;
-      gr = ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR*0.18);
-      gr.addColorStop(0, `rgba(255,255,255,${specA})`);
-      gr.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR*0.18,0,Math.PI*2);
+      // Layer 4: white specular
+      const specA=0.60+smoothWeights[i]*0.30;
+      gr=ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,glowR*0.15);
+      gr.addColorStop(0,`rgba(255,255,255,${specA})`); gr.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.beginPath(); ctx.arc(nd.x,nd.y,glowR*0.15,0,Math.PI*2);
       ctx.fillStyle=gr; ctx.fill();
 
-      // Layer 4: grain
+      // Grain
       grain[i].forEach(p => {
-        const pr = p.dist*glowR;
-        const gx = nd.x + Math.cos(p.angle)*pr;
-        const gy = nd.y + Math.sin(p.angle)*pr;
-        const a  = p.baseAlpha*(1-p.dist*0.85)*(smoothWeights[i]*0.65+0.35)*pulse*0.50;
-        ctx.fillStyle=`rgba(255,255,255,${a})`;
-        ctx.fillRect(gx,gy,p.size,p.size);
+        const pr=p.dist*glowR;
+        const gx=nd.x+Math.cos(p.angle)*pr, gy=nd.y+Math.sin(p.angle)*pr;
+        const a=p.baseAlpha*(1-p.dist*0.85)*(smoothWeights[i]*0.65+0.35)*pulse*0.45;
+        ctx.fillStyle=`rgba(255,255,255,${a})`; ctx.fillRect(gx,gy,p.size,p.size);
       });
 
       // Centre dot
-      ctx.beginPath(); ctx.arc(nd.x,nd.y,3,0,Math.PI*2);
+      ctx.beginPath(); ctx.arc(nd.x,nd.y,3.5,0,Math.PI*2);
       ctx.fillStyle='#fff'; ctx.fill();
 
-      // Node number label
-      const offsets = [{x:0,y:-22},{x:22,y:0},{x:0,y:22},{x:-22,y:0}];
-      ctx.font = '700 12px -apple-system, BlinkMacSystemFont, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = hexA(nd.color, 0.85);
-      ctx.fillText(String(i+1), nd.x + offsets[i].x, nd.y + offsets[i].y);
+      // Label OUTSIDE the circle — pushed beyond R from centre
+      // Direction vector from centre to node, extended past R
+      const dx=nd.x-cx, dy=nd.y-cy;
+      const len=Math.sqrt(dx*dx+dy*dy)||1;
+      const labelDist=R+22; // 22px outside the circle edge
+      const lx=cx+dx/len*labelDist;
+      const ly=cy+dy/len*labelDist;
+      ctx.font='700 12px -apple-system,BlinkMacSystemFont,sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle=hexA(nd.color,0.90);
+      ctx.fillText(String(i+1), lx, ly);
     });
 
     // Cursor
-    ctx.beginPath(); ctx.arc(pos.x,pos.y,24,0,Math.PI*2);
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,20,0,Math.PI*2);
     ctx.strokeStyle='rgba(255,255,255,0.14)'; ctx.lineWidth=1; ctx.stroke();
-
-    ctx.beginPath(); ctx.arc(pos.x,pos.y,18,0,Math.PI*2);
+    ctx.beginPath(); ctx.arc(pos.x,pos.y,14,0,Math.PI*2);
     ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.fill();
-
     ctx.beginPath(); ctx.arc(pos.x,pos.y,3,0,Math.PI*2);
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fill();
   }
 
-  // ── Input ──────────────────────────────────────────────────────────────────
-  function toLocal(cx2,cy2) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (cx2-rect.left) * (W/rect.width),
-      y: (cy2-rect.top)  * (H/rect.height),
-    };
+  function toLocal(ex,ey) {
+    const rect=canvas.getBoundingClientRect();
+    return { x:(ex-rect.left)*(W/rect.width), y:(ey-rect.top)*(H/rect.height) };
   }
-
   function clampToPad(x,y) {
-    const dx=x-cx, dy=y-cy;
-    const d=Math.sqrt(dx*dx+dy*dy), maxR=R-14;
+    const dx=x-cx, dy=y-cy, d=Math.sqrt(dx*dx+dy*dy), maxR=R-14;
     if (d<=maxR) return {x,y};
     return { x:cx+dx/d*maxR, y:cy+dy/d*maxR };
   }
 
   canvas.addEventListener('mousedown', e => {
-    e.preventDefault();
-    dragging=true; snapping=false;
-    const p=toLocal(e.clientX,e.clientY);
-    tgt=clampToPad(p.x,p.y);
+    e.preventDefault(); dragging=true; snapping=false;
+    tgt=clampToPad(...Object.values(toLocal(e.clientX,e.clientY)));
   });
-
   document.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const p=toLocal(e.clientX,e.clientY);
-    tgt=clampToPad(p.x,p.y);
+    tgt=clampToPad(...Object.values(toLocal(e.clientX,e.clientY)));
   });
-
   document.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging=false;
-
-    // Corner snap check
+    if (!dragging) return; dragging=false;
     let closest=Infinity, cIdx=-1;
     nodes.forEach((nd,i) => {
       const d=dist(pos.x,pos.y,nd.x,nd.y);
-      if (d < CORNER_SNAP && d < closest) { closest=d; cIdx=i; }
+      if (d<CORNER_SNAP && d<closest) { closest=d; cIdx=i; }
     });
-    if (cIdx >= 0) {
-      snapping=true;
-      snapFrom={x:pos.x,y:pos.y};
+    if (cIdx>=0) {
+      snapping=true; snapFrom={x:pos.x,y:pos.y};
       snapTo={x:nodes[cIdx].x,y:nodes[cIdx].y};
-      snapT=0; snapNodeIdx=cIdx;
-      tgt={...snapTo};
+      snapT=0; snapNodeIdx=cIdx; tgt={...snapTo};
     }
   });
 
-  // ── Main loop ──────────────────────────────────────────────────────────────
   function loop(ts) {
     updatePhysics();
     updateWeights();
     render(ts);
     AudioEngine.setGains(smoothWeights);
     updateSlotBars();
-    updateHUD();
+    updateBlendStatus(currentZoneBlend);
     requestAnimationFrame(loop);
   }
-
   requestAnimationFrame(loop);
 
-  // Public API
   return {
     setNodeColor(slotIdx, color) { nodes[slotIdx].color = color; },
   };
 }
 
-// ─── Spacebar toggle ─────────────────────────────────────────────────────────
+// ─── Spacebar toggle ──────────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.code==='Space' && e.target.tagName!=='INPUT') {
     e.preventDefault();
@@ -906,8 +895,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderLibrary();
   renderSlots();
   window.orbital = initOrbital();
-
-  // Overlay click starts audio (satisfies Chrome autoplay policy)
   document.getElementById('audio-overlay').addEventListener('click', () => {
     AudioEngine.start();
   });
